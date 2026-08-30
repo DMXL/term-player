@@ -61,6 +61,21 @@ Before you commit, add a bullet to `## [Unreleased]` in `CHANGELOG.md`, under `#
 
 Write it for someone who runs the console, not for someone reading the diff. "The queue no longer empties when the device goes idle" is a line. "Refactor `session.ts` polling" is not, because it names the file rather than the effect.
 
+Keep it to one line, and resist the pull of this repo's prose everywhere else. A changelog is scanned rather than read, and someone deciding whether to upgrade wants the fact, not the reasoning behind it. The reasoning goes in the commit message, where there is room for it and where anyone who wants it is one click away. If a bullet needs a second sentence to stand up, the first sentence was the wrong one.
+
+```
+* The queue no longer empties when the device goes idle.        <- a line
+* Sizing that follows the window, dropping the cover when the
+  queue needs the room.                                          <- a line
+* Two readings of a queue endpoint that answers dishonestly.
+  An idle device returns an empty list while still knowing the
+  track, so the console says so and keeps asking on a widening
+  interval. A context that cannot yield a next track is padded
+  with ten copies of ...                                         <- a commit message
+```
+
+The release notes are this section verbatim, so a bullet written long is published long.
+
 What does not get a line: refactors nothing outside the repo can see, prose and comment edits, README or `CLAUDE.md` changes, and anything to do with the build that leaves the console behaving identically. The test is whether a user could tell. If they could not, leave the changelog alone.
 
 ### What each number means

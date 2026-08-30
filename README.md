@@ -108,7 +108,7 @@ The rule that matters most is the one about channels: nothing in `tui/` decides 
 
 ## Versioning
 
-The numbering is [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the log is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Every change a listener could notice earns a line in `CHANGELOG.md` under `## [Unreleased]` when it is committed, not when it is released.
+The numbering is [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the log is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Every change a listener could notice earns one line in `CHANGELOG.md` under `## [Unreleased]` when it is committed, not when it is released. One line, because the release notes are that section verbatim and a changelog is scanned rather than read. The reasoning goes in the commit message.
 
 Below 1.0.0 the split is simple. A release carrying only fixes is a patch. A release carrying anything a listener would notice as new, different or gone is a minor. 1.0.0 arrives when the bug hunt is over and the keys and the `spot` subcommands are ones worth keeping.
 

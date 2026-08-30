@@ -26,6 +26,9 @@ const OP_ITEM = 'PAT: DMXL';
 /** Headings that mean a listener would notice something new, changed or gone. */
 const NOTICEABLE = ['Added', 'Changed', 'Deprecated', 'Removed'];
 
+/** Roughly two lines of terminal. Past this a bullet has become a commit message. */
+const LINE_BUDGET = 180;
+
 type Bump = 'patch' | 'minor' | 'major';
 
 function fail(message: string, remedy?: string): never {
@@ -118,8 +121,16 @@ function main(argv: string[]): void {
     }
   }
   const body = trimBlanks(lines.slice(start + 1, end));
-  const entries = body.filter((l) => /^\s*[*-] /.test(l));
   const headings = body.filter((l) => /^### /.test(l)).map((l) => l.slice(4).trim());
+
+  // A bullet is its marker line plus any lines wrapped underneath it.
+  const entries: string[] = [];
+  for (const line of body) {
+    if (/^\s*[*-] /.test(line)) entries.push(line.trim());
+    else if (entries.length > 0 && line.trim() !== '' && !/^### /.test(line)) {
+      entries[entries.length - 1] += ` ${line.trim()}`;
+    }
+  }
 
   if (entries.length === 0) {
     fail(
@@ -128,7 +139,18 @@ function main(argv: string[]): void {
     );
   }
 
-  // 4. The bump has to match what actually landed.
+  // 4. Brief. These lines go out as the release notes verbatim, and a changelog
+  //    is scanned rather than read.
+  const overlong = entries.filter((l) => l.length > LINE_BUDGET);
+  if (overlong.length > 0 && !forced) {
+    const shown = overlong.map((l) => `  ${l.slice(0, 88)} ... (${l.length} characters)`).join('\n');
+    fail(
+      `${overlong.length} changelog entr${overlong.length === 1 ? 'y runs' : 'ies run'} past ${LINE_BUDGET} characters.\n\n${shown}`,
+      'Cut each to one line and move the reasoning into the commit message, or pass --yes.',
+    );
+  }
+
+  // 5. The bump has to match what actually landed.
   const noticeable = headings.filter((h) => NOTICEABLE.includes(h));
   if (bump === 'patch' && noticeable.length > 0 && !forced) {
     fail(
@@ -148,11 +170,11 @@ function main(argv: string[]): void {
   const next = nextVersion(current, bump);
   const tag = `v${next}`;
 
-  // 5. It has to compile. This runs on a dry run too, because that is the rehearsal.
+  // 6. It has to compile. This runs on a dry run too, because that is the rehearsal.
   process.stdout.write(`\nTypechecking before ${tag}.\n`);
   stream('pnpm', ['typecheck']);
 
-  // 6. Move Unreleased into a dated section and rewrite the link refs.
+  // 7. Move Unreleased into a dated section and rewrite the link refs.
   const rebuilt = [
     ...lines.slice(0, start + 1),
     '',
@@ -175,7 +197,7 @@ function main(argv: string[]): void {
     return;
   }
 
-  // 7. Everything from here writes, so the token is fetched first. A lapsed
+  // 8. Everything from here writes, so the token is fetched first. A lapsed
   //    1Password session fails silently later otherwise, and git falls back to
   //    anonymous and the push is rejected as a bad credential.
   const token = capture('op', ['item', 'get', OP_ITEM, '--fields', 'token', '--reveal']);
