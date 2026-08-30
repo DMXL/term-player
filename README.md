@@ -64,9 +64,11 @@ Art renders inline on iTerm2 and Kitty. Everywhere else the space becomes a colo
 
 The window is measured on every frame and again whenever it changes. The cover takes a share of the height rather than a fixed number of rows, so a tall window gets a large cover and a short one gets a small cover instead of a clipped screen. Below a certain height the cover is dropped entirely and the queue takes the room, because a list you can read beats a picture you cannot.
 
-The cover is sent with a height and no width. Give a terminal both and it fits the picture inside that box and keeps its aspect ratio, so any error in the assumed shape of a cell comes back as a band of background under the cover. Given one dimension it works the other out itself and there is no slack to show, whatever the font.
+How wide the cover has to be for a square to come out square depends on the shape of a cell, which depends on the font, so the terminal is asked at startup rather than assumed. `spot probe` reports what it said, and whether it answered at all.
 
-The shape of a cell is still asked for at startup, since the cover has to be centred and that needs an estimate of how wide it came out. Being a little wrong there moves the picture a column, which is worth nothing like the trouble it used to cause. `spot probe` reports what the terminal said, and whether it answered at all.
+The cover is then sent with both dimensions and no preserving of the aspect ratio, so it fills the box it is given. Any mismatch between the shape of the box and the shape of the cover has to go somewhere, and preserving the ratio puts it into a band of background along whichever edge has the slack. Filling puts it into the picture instead, where a couple of percent is invisible and a band is not. A terminal that will not report its cell size therefore gives a very slightly wide cover rather than a bordered one.
+
+Leaving a dimension out is not the escape it appears to be. Unspecified means `auto`, and auto is the cover's own pixel size rather than a width worked out from the height, so the box comes out as wide as the JPEG and the slack moves to the side.
 
 ## Two channels, and why
 

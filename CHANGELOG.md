@@ -6,6 +6,10 @@ While the version stays below 1.0.0, anything may change between releases. See t
 
 ## [Unreleased]
 
+### Fixed
+
+* Cover art no longer has a band of background down one edge.
+
 ## [0.1.0] - 2026-08-30
 
 First public release.

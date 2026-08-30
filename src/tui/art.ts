@@ -82,17 +82,25 @@ async function seedOf(image: string, key: string): Promise<Rgb> {
 }
 
 /**
- * Draws the cover at a given cell size. The caller has already worked out how
- * many rows it may have, and passes twice that in columns, since a cell is
- * about half as wide as it is tall and a square cover has to account for it.
+ * Draws the cover at a given cell size. The caller has already worked out both,
+ * from the rows it can spare and the measured shape of a cell, so a square cover
+ * is asked for in a box that is as near square as the terminal could describe.
  */
-export function draw(data: string, _cols: number, rows: number, how: Protocol): string {
-  // Only the height is given. Ask for both and the terminal fits the cover
-  // inside that box and keeps its aspect ratio, so any error in the assumed cell
-  // shape comes back as a band of background under the picture. Given one
-  // dimension it works the other out itself and there is no slack to show.
+export function draw(data: string, cols: number, rows: number, how: Protocol): string {
+  // Both dimensions in cells, and no preserving of the aspect ratio.
+  //
+  // Any mismatch between the shape of the box and the shape of the cover has to
+  // go somewhere. Preserve the ratio and it goes into a band of background along
+  // whichever edge has the slack, which is what showed up first underneath and
+  // then down the side. Filling the box instead puts it into the picture, where
+  // being a couple of percent wide is not something anyone will catch.
+  //
+  // Leaving a dimension out is not the escape it looks like. Unspecified means
+  // `auto`, and auto is the cover's own pixel size rather than a width worked
+  // out from the height, so the box came out as wide as the JPEG and the slack
+  // simply moved to the right.
   if (how === 'iterm') {
-    return `${ESC}]1337;File=inline=1;height=${rows};preserveAspectRatio=1:${data}${'\x07'}`;
+    return `${ESC}]1337;File=inline=1;width=${cols};height=${rows};preserveAspectRatio=0:${data}${'\x07'}`;
   }
 
   if (how === 'kitty') {
@@ -102,7 +110,7 @@ export function draw(data: string, _cols: number, rows: number, how: Protocol): 
     for (let i = 0; i < data.length; i += CHUNK) {
       const piece = data.slice(i, i + CHUNK);
       const last = i + CHUNK >= data.length;
-      const head = i === 0 ? `a=T,f=100,r=${rows},` : '';
+      const head = i === 0 ? `a=T,f=100,c=${cols},r=${rows},` : '';
       out += `${ESC}_G${head}m=${last ? 0 : 1};${piece}${ESC}\\`;
     }
     return out;
