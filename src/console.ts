@@ -90,7 +90,7 @@ export async function run(): Promise<number> {
 
   const handle = async (key: { name: string; value?: string }): Promise<void> => {
     const l = layout(screen.size, ratio);
-    const maxScroll = Math.max(0, snap.queue.length + (snap.queueTruncated ? 1 : 0) - l.queueRows);
+    const maxScroll = Math.max(0, snap.queue.length - l.queueRows);
     const ch = key.name === 'char' ? key.value : undefined;
 
     if (key.name === 'quit' || ch === 'q') {

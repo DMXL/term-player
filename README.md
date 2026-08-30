@@ -82,7 +82,7 @@ Gone, and not worth designing around: recommendations, related artists, audio fe
 
 Three limits shape this console directly:
 
-* The queue endpoint returns twenty upcoming items and no more, which is fewer than the desktop app shows. The panel says so rather than implying the list is complete.
+* The queue endpoint returns twenty upcoming items and no more, which is fewer than the desktop app shows. The console does not mention it. Where Spotify's reporting stops is not something you need told while you are listening, and a line saying so sat at the end of every long queue reading like the playlist was ending.
 * Spotify lets a paused device go idle, and then answers the queue with nothing at all while still knowing the track. The console says so instead of showing an empty list, and keeps asking on a widening interval, so playing again fills it back in. Note that it reports this as a 200 with an empty list rather than as no content, so only the player endpoint can tell an idle device from a playlist that has run out.
 * When the playing context cannot yield a next track, Spotify pads the queue with the track already playing, ten identical entries, while the desktop app goes on showing a perfectly good list of its own. A single track album does it every time, and it answers that way for as long as that context stands. Nothing in the response admits to it, since it is a plain 200 and every entry is a well formed track, so the only tell is the repetition. The console says which context is refusing rather than showing ten copies or an empty list, and does not keep asking, because the answer will not change until the track does. Repeat one produces that same list honestly, which is the one case where it is taken at face value.
 

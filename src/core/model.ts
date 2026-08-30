@@ -39,8 +39,6 @@ export interface Snapshot {
   queue: QueueItem[];
   /** Null while unknown, which is the state before the first library call lands. */
   saved: boolean | null;
-  /** True once the queue is as deep as Spotify will ever report it. */
-  queueTruncated: boolean;
   /** Set when something went wrong. Replaces the action bar, because it needs reading. */
   notice: string | null;
   /**
@@ -59,7 +57,6 @@ export const EMPTY: Snapshot = {
   position: 0,
   queue: [],
   saved: null,
-  queueTruncated: false,
   notice: null,
   queueNote: null,
 };

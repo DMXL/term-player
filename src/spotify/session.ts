@@ -12,9 +12,6 @@ import * as local from './local.js';
  * the low rate limit tier and a per second poll would spend it on nothing.
  */
 
-/** All Spotify will report, so a full queue means there is more it is not saying. */
-const QUEUE_CAP = 20;
-
 /** First wait before retrying a queue that came back empty or unanswered. */
 const RETRY_MS = 3_000;
 const RETRY_CEILING_MS = 30_000;
@@ -90,7 +87,6 @@ export class Session {
       position: now.position,
       queue: this.queue,
       saved: this.saved,
-      queueTruncated: this.queue.length >= QUEUE_CAP,
       notice: this.notice,
       queueNote: this.queueNote,
     };
