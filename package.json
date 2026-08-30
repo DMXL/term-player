@@ -1,0 +1,30 @@
+{
+  "name": "term-spotify",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A terminal Spotify console. Now playing, the queue, and the keys you actually use.",
+  "type": "module",
+  "bin": {
+    "spot": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/cli.js",
+    "typecheck": "tsc --noEmit",
+    "login": "tsx src/cli.ts login",
+    "probe": "tsx src/cli.ts probe"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "chalk": "^6.0.0",
+    "string-width": "^8.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.3.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}
