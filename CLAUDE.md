@@ -1,10 +1,10 @@
 # Working on term-spotify
 
-## Push with Homebrew git, not the one on `PATH`
+## Pushing
 
-`git` resolves to `~/.local/share/canva-git/bin/git`, a wrapper that tries Canva's auth against every remote and fails this one with `authorization timeout` followed by a misleading `Invalid username or token`. Use `/opt/homebrew/bin/git` for anything that touches the network here. Local commands are fine either way.
+The remote is a `DMXL` one, so the usual rule applies: network commands go through `/opt/homebrew/bin/git`, and `op` has to be authorized first. Both failures are already written up in the global instructions.
 
-Credentials come from 1Password through a repo local helper, so no token is on disk. The inherited system helpers are cleared first, because Homebrew's git consults `osxkeychain` and `oauth` before repo local ones and a cached `danielke-canva` token would otherwise win and 404.
+Credentials here come from 1Password through a repo local helper, so no token is on disk and nothing needs setting up again.
 
 ## Do not spend the rate limit
 
