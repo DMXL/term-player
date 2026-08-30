@@ -30,6 +30,7 @@ export class Session {
   private queue: QueueItem[] = [];
   private saved: boolean | null = null;
   private albumUri: string | null = null;
+  private artist: string | null = null;
   private notice: string | null = null;
   private queueNote: string | null = null;
   private inFlight = false;
@@ -70,6 +71,19 @@ export class Session {
       this.fetchedState = now.state;
       // Stale for one frame at most, and the alternative is blocking the tick.
       this.repeating = now.repeating;
+      if (changed) {
+        // The full artist list is a network answer, so it is dropped the
+        // moment the track changes and the local field stands in until the
+        // next read lands. Otherwise the old track's artists would show
+        // against the new track's name for a frame.
+        this.artist = null;
+        // The queue is the same shape of problem. It was fetched for the track
+        // that just ended, so its top entry is the song now playing. Cleared
+        // here so the frame between a change and the network answering shows
+        // "Nothing queued" instead of the next song mislabelled.
+        this.queue = [];
+        this.queueNote = null;
+      }
       void this.refresh(now.uri, !changed, now.repeating);
     }
 
@@ -77,7 +91,7 @@ export class Session {
       track: {
         uri: now.uri,
         name: now.name,
-        artist: now.artist,
+        artist: this.artist ?? now.artist,
         album: now.album,
         albumUri: this.albumUri,
         artworkUrl: now.artworkUrl,
@@ -112,15 +126,33 @@ export class Session {
       // list when there is nothing to ask, so on its own it cannot tell a
       // sleeping device from a playlist that has run out.
       const [raw, player] = await Promise.all([this.readQueue(), this.readPlayer()]);
-      if (player.albumUri !== null) this.albumUri = player.albumUri;
+
+      // A queue is only worth showing if it belongs to the track that asked for
+      // it. The desktop app advances the moment a track ends, but the Web API
+      // can answer a beat later, and the queue it hands back then is for the
+      // track that just finished, with the new track sitting at its top.
+      // Accepting it would mislabel the current song as next, and settling
+      // would keep that wrong list for the whole track, so hold and ask again.
+      const behind =
+        (raw !== null && raw.playing !== null && raw.playing !== uri) ||
+        (!player.idle && player.uri !== null && player.uri !== uri);
+
+      if (!behind) {
+        if (player.albumUri !== null) this.albumUri = player.albumUri;
+        if (player.artists !== null) this.artist = player.artists;
+      }
       if (!queueOnly) this.saved = await this.readSaved(uri);
 
-      const degenerate = raw !== null && !believable(raw, uri, repeating);
+      const degenerate = raw !== null && !believable(raw.items, uri, repeating);
 
       this.notice = null;
 
-      if (raw !== null && raw.length > 0 && !degenerate) {
-        this.queue = raw;
+      if (behind) {
+        this.queue = [];
+        this.queueNote = null;
+        this.hold();
+      } else if (raw !== null && raw.items.length > 0 && !degenerate) {
+        this.queue = raw.items;
         this.queueNote = null;
         this.settle();
       } else if (degenerate) {
@@ -156,16 +188,25 @@ export class Session {
     this.backoff = RETRY_MS;
   }
 
-  /** Null when Spotify answered 204, which is not the same as an empty queue. */
-  private async readQueue(): Promise<QueueItem[] | null> {
-    const body = await call<{ queue: ApiTrack[] }>('/me/player/queue');
+  /**
+   * Null when Spotify answered 204, which is not the same as an empty queue.
+   *
+   * `playing` is the track the queue is relative to, and it can lag the desktop
+   * app by one track at the moment a track changes, which is what the caller
+   * checks before trusting the list.
+   */
+  private async readQueue(): Promise<{ items: QueueItem[]; playing: string | null } | null> {
+    const body = await call<{ queue: ApiTrack[]; currently_playing: { uri: string } | null }>('/me/player/queue');
     if (body === null) return null;
-    return (body.queue ?? []).map((t) => ({
-      uri: t.uri,
-      name: t.name,
-      artist: t.artists.map((a) => a.name).join(', '),
-      duration: t.duration_ms,
-    }));
+    return {
+      playing: body.currently_playing?.uri ?? null,
+      items: (body.queue ?? []).map((t) => ({
+        uri: t.uri,
+        name: t.name,
+        artist: t.artists.map((a) => a.name).join(', '),
+        duration: t.duration_ms,
+      })),
+    };
   }
 
   private async readSaved(uri: string): Promise<boolean> {
@@ -181,13 +222,23 @@ export class Session {
    * A 204 means no device holds the playback. The local channel still knows the
    * track perfectly well, which is exactly the situation that reads as a bug.
    */
-  private async readPlayer(): Promise<{ idle: boolean; albumUri: string | null; context: string | null }> {
+  private async readPlayer(): Promise<{
+    idle: boolean;
+    uri: string | null;
+    albumUri: string | null;
+    context: string | null;
+    artists: string | null;
+  }> {
     const body = await call<{ item: ApiTrack | null; context: { type: string } | null }>('/me/player');
-    if (body === null) return { idle: true, albumUri: null, context: null };
+    if (body === null) return { idle: true, uri: null, albumUri: null, context: null, artists: null };
     return {
       idle: false,
+      uri: body.item?.uri ?? null,
       albumUri: body.item?.album?.uri ?? null,
       context: body.context?.type ?? null,
+      // AppleScript's `artist` holds only the primary artist, so the full list
+      // is joined here from the same call that already carries the album URI.
+      artists: body.item?.artists.map((a) => a.name).join(', ') ?? null,
     };
   }
 

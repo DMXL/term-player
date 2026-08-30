@@ -16,7 +16,7 @@ Keep it that way. Anything that redraws must not reach for the network, and `pro
 
 `src/spotify/local.ts` is the desktop app over AppleScript. Its dictionary lives at `/Applications/Spotify.app/Contents/Resources/Spotify.sdef` and is worth rereading before assuming anything: it declares **zero** collections, so there is no queue and no playlist in it, `starred` is read only with a handler that raises AppleEvent error `-10000`, and there is an album name but no album URI.
 
-Two traps in it. `duration` is milliseconds even though the dictionary says seconds, while `player position` really is seconds. And `artist` is one text field with several artists already joined, not a list.
+Two traps in it. `duration` is milliseconds even though the dictionary says seconds, while `player position` really is seconds. And `artist` is one text field that holds only the primary artist, not every artist on the track, so the full list comes from the Web API.
 
 `src/spotify/client.ts` covers exactly the three gaps: the queue, the saved state, and the album URI. Do not widen it.
 

@@ -12,7 +12,7 @@ export interface Track {
   /** A `spotify:track:...` URI. */
   uri: string;
   name: string;
-  /** Already joined. The local channel hands over one text field, not a list. */
+  /** Already joined, several names comma separated. */
   artist: string;
   album: string;
   /** Absent until the Web API has been asked, since AppleScript has no album URI. */
