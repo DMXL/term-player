@@ -201,7 +201,9 @@ function queueLines(ctx: Ctx, l: Layout): string[] {
   });
 
   if (snap.queueTruncated) {
-    lines.push(`${fg(p.track)}${dim}${truncate('twenty ahead, which is all Spotify will report', l.inner)}`);
+    // Say that the limit is Spotify's, not the playlist's. "Twenty ahead" on its
+    // own reads as the queue ending here, which is the opposite of the point.
+    lines.push(`${fg(p.track)}${dim}${truncate('Spotify will not report further than twenty ahead.', l.inner)}`);
   }
 
   return lines.slice(ctx.scroll, ctx.scroll + l.queueRows);
