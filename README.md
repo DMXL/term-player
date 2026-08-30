@@ -110,20 +110,21 @@ The rule that matters most is the one about channels: nothing in `tui/` decides 
 
 ## Versioning
 
-The numbering is [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the log is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Every change a listener could notice earns one line in `CHANGELOG.md` under `## [Unreleased]` when it is committed, not when it is released. One line, because the release notes are that section verbatim and a changelog is scanned rather than read. The reasoning goes in the commit message.
+The numbering is [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the log is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), with one deliberate departure: there is no `Unreleased` section, and nothing is logged until it ships.
 
-Below 1.0.0 the split is simple. A release carrying only fixes is a patch. A release carrying anything a listener would notice as new, different or gone is a minor. 1.0.0 arrives when the bug hunt is over and the keys and the `spot` subcommands are ones worth keeping.
+The reason is that a commit is not proof. CI typechecks, builds and checks the layering, but it cannot tell whether the console looks right with music playing. So the changelog is written at release time, drawn from the commits since the last tag, with each line confirmed as a change somebody actually saw working. A line in there is something checked, not merely something committed. Which makes the commit message the real record, since it is what the release reads.
 
-Releases are cut with one command, which refuses more often than it runs:
+Below 1.0.0 the split is simple. Fixes alone are a patch. Anything a listener would notice as new, different or gone is a minor, however small. 1.0.0 arrives when the bug hunt is over and the keys and the `spot` subcommands are ones worth keeping.
+
+A release is cut in one step, `/release`, which reads the range, proposes a line per change, waits for confirmation, and then runs:
 
 ```zsh
-pnpm release minor --dry-run   # rehearse: every guard runs, the notes print, nothing is written
-pnpm release minor             # do it
+pnpm release minor --notes-file <path>
 ```
 
-It checks the tree is clean, that you are on `main`, that `Unreleased` has entries, that the bump matches what those entries are, and that `pnpm typecheck` passes. Only then does it move `Unreleased` into a dated section, bump `package.json`, commit, tag, push, and open the [GitHub release](https://github.com/DMXL/term-spotify/releases) with that section as its notes.
+That refuses a dirty tree, a branch that is not `main`, notes that are empty or overlong, a patch standing over entries a listener would notice, a silent `0.x` to `1.0.0`, and a failing typecheck. It writes nothing until every one of them passes, so a refusal is always safe. Then it writes the dated section, bumps `package.json`, commits, tags, pushes both, and opens the [GitHub release](https://github.com/DMXL/term-spotify/releases) with those notes.
 
-The full rules, including what does not earn a changelog line and when a release is worth cutting at all, are in `CLAUDE.md`, so that any session working here follows the same ones.
+The full rules are in `CLAUDE.md` and `.claude/skills/release/SKILL.md`, so that any session working here follows the same ones.
 
 ## Development
 

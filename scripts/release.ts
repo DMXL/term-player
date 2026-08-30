@@ -1,7 +1,12 @@
 /**
  * Cut a release.
  *
- *   pnpm release patch|minor|major [--dry-run] [--prerelease] [--yes]
+ *   pnpm release patch|minor|major --notes-file <path> [--dry-run] [--prerelease] [--yes]
+ *
+ * The notes come from a file rather than from the changelog, because what goes
+ * into a release is decided at release time, from the commits, and confirmed by
+ * a human before it is written anywhere. The `/release` skill is what normally
+ * produces that file.
  *
  * It refuses more often than it runs, which is the point. Nothing is written
  * until every guard has passed, so a refusal leaves the tree exactly as it was.
@@ -80,63 +85,72 @@ function trimBlanks(lines: string[]): string[] {
   return lines.slice(start, end);
 }
 
+/** A bullet is its marker line plus any lines wrapped underneath it. */
+function bulletsOf(lines: string[]): string[] {
+  const found: string[] = [];
+  for (const line of lines) {
+    if (/^\s*[*-] /.test(line)) found.push(line.trim());
+    else if (found.length > 0 && line.trim() !== '' && !/^#{2,4} /.test(line)) {
+      found[found.length - 1] += ` ${line.trim()}`;
+    }
+  }
+  return found;
+}
+
+function valueOf(argv: string[], flag: string): string | undefined {
+  const inline = argv.find((a) => a.startsWith(`${flag}=`));
+  if (inline !== undefined) return inline.slice(flag.length + 1);
+  const at = argv.indexOf(flag);
+  return at === -1 ? undefined : argv[at + 1];
+}
+
 function main(argv: string[]): void {
   const flags = new Set(argv.filter((a) => a.startsWith('--')));
-  const positional = argv.filter((a) => !a.startsWith('--'));
+  const notesPath = valueOf(argv, '--notes-file');
+  const positional = argv.filter((a) => !a.startsWith('--') && a !== notesPath);
   const bump = positional[0] as Bump | undefined;
   const dryRun = flags.has('--dry-run');
   const forced = flags.has('--yes');
   const prerelease = flags.has('--prerelease');
 
+  const usage = 'pnpm release patch|minor|major --notes-file <path> [--dry-run] [--prerelease] [--yes]';
+
   if (bump !== 'patch' && bump !== 'minor' && bump !== 'major') {
+    fail('say which kind of release this is.', usage);
+  }
+
+  // 1. The notes say what is going out. They are decided before this runs, from
+  //    the commits, and confirmed by a human. Normally the /release skill writes them.
+  if (notesPath === undefined || notesPath === '') {
+    fail('no --notes-file. This is where what goes out is decided, so it is not optional.', usage);
+  }
+  let notesRaw: string;
+  try {
+    notesRaw = readFileSync(notesPath, 'utf8');
+  } catch {
+    fail(`cannot read the notes at ${notesPath}.`);
+  }
+  const notesLines = trimBlanks(notesRaw.split('\n'));
+  const entries = bulletsOf(notesLines);
+  const headings = notesLines.filter((l) => /^### /.test(l)).map((l) => l.slice(4).trim());
+
+  if (entries.length === 0) {
     fail(
-      'say which kind of release this is.',
-      'pnpm release patch|minor|major [--dry-run] [--prerelease] [--yes]',
+      `${notesPath} has no entries in it.`,
+      'A release with nothing written down tells a reader nothing. Say what changed first.',
     );
   }
 
-  // 1. The tree has to be clean, or the release commit carries somebody's work in progress.
+  // 2. The tree has to be clean, or the release commit carries somebody's work in progress.
   const dirty = capture(GIT, ['status', '--porcelain']);
   if (dirty !== '') {
     fail(`the working tree is not clean.\n\n${dirty}`, 'Commit or stash first, then run this again.');
   }
 
-  // 2. Releases come off the default branch.
+  // 3. Releases come off the default branch.
   const branch = capture(GIT, ['rev-parse', '--abbrev-ref', 'HEAD']);
   if (branch !== BRANCH) {
     fail(`you are on ${branch}, and releases are cut from ${BRANCH}.`);
-  }
-
-  // 3. There has to be something to release, written the way a listener would read it.
-  const changelog = readFileSync(CHANGELOG, 'utf8');
-  const lines = changelog.split('\n');
-  const start = lines.findIndex((l) => /^## \[Unreleased\]/.test(l));
-  if (start === -1) fail('CHANGELOG.md has no `## [Unreleased]` heading.');
-
-  let end = lines.length;
-  for (let i = start + 1; i < lines.length; i += 1) {
-    if (/^## \[/.test(lines[i]!) || /^\[Unreleased\]:/.test(lines[i]!)) {
-      end = i;
-      break;
-    }
-  }
-  const body = trimBlanks(lines.slice(start + 1, end));
-  const headings = body.filter((l) => /^### /.test(l)).map((l) => l.slice(4).trim());
-
-  // A bullet is its marker line plus any lines wrapped underneath it.
-  const entries: string[] = [];
-  for (const line of body) {
-    if (/^\s*[*-] /.test(line)) entries.push(line.trim());
-    else if (entries.length > 0 && line.trim() !== '' && !/^### /.test(line)) {
-      entries[entries.length - 1] += ` ${line.trim()}`;
-    }
-  }
-
-  if (entries.length === 0) {
-    fail(
-      'CHANGELOG.md has nothing under `## [Unreleased]`.',
-      'Log what changed first. A release with no entries tells a reader nothing.',
-    );
   }
 
   // 4. Brief. These lines go out as the release notes verbatim, and a changelog
@@ -145,7 +159,7 @@ function main(argv: string[]): void {
   if (overlong.length > 0 && !forced) {
     const shown = overlong.map((l) => `  ${l.slice(0, 88)} ... (${l.length} characters)`).join('\n');
     fail(
-      `${overlong.length} changelog entr${overlong.length === 1 ? 'y runs' : 'ies run'} past ${LINE_BUDGET} characters.\n\n${shown}`,
+      `${overlong.length} entr${overlong.length === 1 ? 'y runs' : 'ies run'} past ${LINE_BUDGET} characters.\n\n${shown}`,
       'Cut each to one line and move the reasoning into the commit message, or pass --yes.',
     );
   }
@@ -154,7 +168,7 @@ function main(argv: string[]): void {
   const noticeable = headings.filter((h) => NOTICEABLE.includes(h));
   if (bump === 'patch' && noticeable.length > 0 && !forced) {
     fail(
-      `Unreleased contains ${noticeable.join(' and ')}, which a listener would notice, so this is a minor.`,
+      `the notes contain ${noticeable.join(' and ')}, which a listener would notice, so this is a minor.`,
       'Run `pnpm release minor`, or pass --yes if you are certain it is a patch.',
     );
   }
@@ -174,22 +188,34 @@ function main(argv: string[]): void {
   process.stdout.write(`\nTypechecking before ${tag}.\n`);
   stream('pnpm', ['typecheck']);
 
-  // 7. Move Unreleased into a dated section and rewrite the link refs.
+  // 7. Put the dated section above the newest one already there, and add its link ref.
+  const lines = readFileSync(CHANGELOG, 'utf8').split('\n');
+  let sectionAt = lines.findIndex((l) => /^## \[/.test(l));
+  if (sectionAt === -1) {
+    // Nothing released yet, so it goes above the link refs, or at the foot.
+    sectionAt = lines.findIndex((l) => /^\[[^\]]+\]:\s*https?:/.test(l));
+    if (sectionAt === -1) sectionAt = lines.length;
+  }
   const rebuilt = [
-    ...lines.slice(0, start + 1),
+    ...trimBlanks(lines.slice(0, sectionAt)),
     '',
     `## [${next}] - ${today()}`,
     '',
-    ...body,
+    ...notesLines,
     '',
-    ...lines.slice(end),
+    ...lines.slice(sectionAt),
   ];
-  const refIndex = rebuilt.findIndex((l) => l.startsWith('[Unreleased]:'));
-  if (refIndex === -1) fail('CHANGELOG.md has no `[Unreleased]:` link reference at the foot.');
-  rebuilt[refIndex] = `[Unreleased]: https://github.com/${REPO}/compare/${tag}...HEAD`;
-  rebuilt.splice(refIndex + 1, 0, `[${next}]: https://github.com/${REPO}/compare/v${current}...${tag}`);
 
-  const notes = body.join('\n');
+  // The previous version only has a tag to compare against if it was ever released.
+  const tagged = capture(GIT, ['tag', '--list', `v${current}`]) !== '';
+  const ref = tagged
+    ? `[${next}]: https://github.com/${REPO}/compare/v${current}...${tag}`
+    : `[${next}]: https://github.com/${REPO}/releases/tag/${tag}`;
+  const refAt = rebuilt.findIndex((l) => /^\[[^\]]+\]:\s*https?:/.test(l));
+  if (refAt === -1) rebuilt.push('', ref);
+  else rebuilt.splice(refAt, 0, ref);
+
+  const notes = notesLines.join('\n');
 
   if (dryRun) {
     process.stdout.write(`\n${current} to ${next}, ${entries.length} entr${entries.length === 1 ? 'y' : 'ies'}.\n`);
@@ -205,7 +231,7 @@ function main(argv: string[]): void {
     fail(`1Password returned nothing for "${OP_ITEM}".`, `Run: op item get "${OP_ITEM}" --fields token --reveal`);
   }
 
-  writeFileSync(CHANGELOG, rebuilt.join('\n'));
+  writeFileSync(CHANGELOG, `${trimBlanks(rebuilt).join('\n')}\n`);
   writeFileSync(
     MANIFEST,
     readFileSync(MANIFEST, 'utf8').replace(/^(\s*"version":\s*")[^"]+(")/m, `$1${next}$2`),
@@ -220,18 +246,8 @@ function main(argv: string[]): void {
   writeFileSync(notesFile, notes);
   stream(
     'gh',
-    [
-      'release',
-      'create',
-      tag,
-      '--repo',
-      REPO,
-      '--title',
-      tag,
-      '--notes-file',
-      notesFile,
-      ...(prerelease ? ['--prerelease'] : []),
-    ],
+    ['release', 'create', tag, '--repo', REPO, '--title', tag, '--notes-file', notesFile,
+      ...(prerelease ? ['--prerelease'] : [])],
     { ...process.env, GH_TOKEN: token },
   );
 

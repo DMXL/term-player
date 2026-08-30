@@ -1,14 +1,10 @@
 # Changelog
 
-Every change a listener could notice gets one line here, in the words they would use rather than the words the diff uses. One line, not a paragraph. The reasoning belongs in the commit that made the change. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the numbering follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+One line per change a listener could notice, in the words they would use rather than the words the diff uses. The reasoning belongs in the commit that made the change, not here.
 
-While the version stays below 1.0.0, anything may change between releases. See the versioning rules in `CLAUDE.md` for what earns a bump and when a release is cut.
+Nothing is written here until a release is cut. What goes in is drawn from the commits since the last tag and confirmed before it lands, so a line here is a change somebody checked rather than one somebody merely committed. That is also why there is no `Unreleased` section: nothing is logged before it ships.
 
-## [Unreleased]
-
-### Fixed
-
-* Cover art no longer has a band of background down one edge.
+The format otherwise follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the numbering follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the version stays below 1.0.0, anything may change between releases. The rules are in `CLAUDE.md`.
 
 ## [0.1.0] - 2026-08-30
 
@@ -23,5 +19,4 @@ First public release.
 * Sizing that follows the window, dropping the cover when the queue needs the room.
 * Queue and saved state fetched only when the track changes or you press a key, never on a timer.
 
-[Unreleased]: https://github.com/DMXL/term-spotify/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/DMXL/term-spotify/releases/tag/v0.1.0
