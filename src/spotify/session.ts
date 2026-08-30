@@ -35,6 +35,7 @@ export class Session {
   private albumUri: string | null = null;
   private notice: string | null = null;
   private inFlight = false;
+  private repeating = false;
 
   /**
    * Set whenever the network half has nothing to show, whether because it
@@ -70,7 +71,8 @@ export class Session {
       this.fetchedFor = now.uri;
       this.fetchedState = now.state;
       // Stale for one frame at most, and the alternative is blocking the tick.
-      void this.refresh(now.uri, !changed);
+      this.repeating = now.repeating;
+      void this.refresh(now.uri, !changed, now.repeating);
     }
 
     return {
@@ -96,14 +98,14 @@ export class Session {
   async refreshNow(): Promise<void> {
     if (this.fetchedFor === null) return;
     this.backoff = RETRY_MS;
-    await this.refresh(this.fetchedFor, false);
+    await this.refresh(this.fetchedFor, false, this.repeating);
   }
 
   /**
    * `queueOnly` keeps a retry down to the one call that was missing, rather than
    * spending three on a saved state and an album URI that have not changed.
    */
-  private async refresh(uri: string, queueOnly: boolean): Promise<void> {
+  private async refresh(uri: string, queueOnly: boolean, repeating: boolean): Promise<void> {
     if (this.inFlight) return;
     this.inFlight = true;
     try {
@@ -111,17 +113,23 @@ export class Session {
       // signal about the device. The queue endpoint answers 200 with an empty
       // list when there is nothing to ask, so on its own it cannot tell a
       // sleeping device from a playlist that has run out.
-      const [queue, player] = await Promise.all([this.readQueue(), this.readPlayer()]);
+      const [raw, player] = await Promise.all([this.readQueue(), this.readPlayer()]);
       if (player.albumUri !== null) this.albumUri = player.albumUri;
       if (!queueOnly) this.saved = await this.readSaved(uri);
 
-      if (queue !== null && queue.length > 0) {
-        this.queue = queue;
+      const degenerate = raw !== null && !believable(raw, uri, repeating);
+
+      if (raw !== null && raw.length > 0 && !degenerate) {
+        this.queue = raw;
         this.notice = null;
         this.settle();
       } else {
         this.queue = [];
-        this.notice = player.idle ? 'Spotify has no active device. Press play to wake it.' : null;
+        this.notice = degenerate
+          ? 'Spotify has not settled the queue yet.'
+          : player.idle
+            ? 'Spotify has no active device. Press play to wake it.'
+            : null;
         this.hold();
       }
     } catch (error) {
@@ -206,4 +214,22 @@ function describe(error: unknown): string {
     return `Spotify said ${error.status}: ${error.message}`;
   }
   return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Whether a queue is worth believing.
+ *
+ * Spotify sometimes answers with the currently playing track repeated: ten
+ * identical entries where the real queue is nothing like it. Nothing in the
+ * response admits to this. It is a plain 200, every item carries `type: track`,
+ * and the shape is exactly what a real answer looks like, so the only tell is
+ * that every entry is the track already playing.
+ *
+ * Repeat one would produce that same shape honestly, which is why the local
+ * channel's repeat flag is what separates a genuine answer from a confused one.
+ */
+export function believable(queue: QueueItem[], playing: string, repeating: boolean): boolean {
+  if (queue.length < 2 || repeating) return true;
+  const distinct = new Set(queue.map((item) => item.uri));
+  return !(distinct.size === 1 && distinct.has(playing));
 }

@@ -86,9 +86,13 @@ async function seedOf(image: string, key: string): Promise<Rgb> {
  * many rows it may have, and passes twice that in columns, since a cell is
  * about half as wide as it is tall and a square cover has to account for it.
  */
-export function draw(data: string, cols: number, rows: number, how: Protocol): string {
+export function draw(data: string, _cols: number, rows: number, how: Protocol): string {
+  // Only the height is given. Ask for both and the terminal fits the cover
+  // inside that box and keeps its aspect ratio, so any error in the assumed cell
+  // shape comes back as a band of background under the picture. Given one
+  // dimension it works the other out itself and there is no slack to show.
   if (how === 'iterm') {
-    return `${ESC}]1337;File=inline=1;width=${cols};height=${rows};preserveAspectRatio=1:${data}${'\x07'}`;
+    return `${ESC}]1337;File=inline=1;height=${rows};preserveAspectRatio=1:${data}${'\x07'}`;
   }
 
   if (how === 'kitty') {
@@ -98,7 +102,7 @@ export function draw(data: string, cols: number, rows: number, how: Protocol): s
     for (let i = 0; i < data.length; i += CHUNK) {
       const piece = data.slice(i, i + CHUNK);
       const last = i + CHUNK >= data.length;
-      const head = i === 0 ? `a=T,f=100,c=${cols},r=${rows},` : '';
+      const head = i === 0 ? `a=T,f=100,r=${rows},` : '';
       out += `${ESC}_G${head}m=${last ? 0 : 1};${piece}${ESC}\\`;
     }
     return out;
