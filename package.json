@@ -22,6 +22,7 @@
     "applescript",
     "now-playing"
   ],
+  "packageManager": "pnpm@11.9.0",
   "type": "module",
   "bin": {
     "spot": "./dist/cli.js"
