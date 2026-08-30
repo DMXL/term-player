@@ -171,7 +171,8 @@ function queueLines(ctx: Ctx, l: Layout): string[] {
   const { palette: p, snap } = ctx;
 
   if (snap.queue.length === 0) {
-    return [`${fg(p.muted)}${dim}Nothing queued.`];
+    // The reason goes where the list would have been, so the keys keep the bar.
+    return [`${fg(p.muted)}${dim}${truncate(snap.queueNote ?? 'Nothing queued.', l.inner)}`];
   }
 
   const times = snap.queue.map((item) => clock(item.duration));

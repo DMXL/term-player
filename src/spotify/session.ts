@@ -34,6 +34,7 @@ export class Session {
   private saved: boolean | null = null;
   private albumUri: string | null = null;
   private notice: string | null = null;
+  private queueNote: string | null = null;
   private inFlight = false;
   private repeating = false;
 
@@ -91,6 +92,7 @@ export class Session {
       saved: this.saved,
       queueTruncated: this.queue.length >= QUEUE_CAP,
       notice: this.notice,
+      queueNote: this.queueNote,
     };
   }
 
@@ -119,17 +121,23 @@ export class Session {
 
       const degenerate = raw !== null && !believable(raw, uri, repeating);
 
+      this.notice = null;
+
       if (raw !== null && raw.length > 0 && !degenerate) {
         this.queue = raw;
-        this.notice = null;
+        this.queueNote = null;
+        this.settle();
+      } else if (degenerate) {
+        // Not a hiccup, and asking again will not help. Spotify pads the queue
+        // with the current track whenever the context cannot yield a next one,
+        // and it answers that way for as long as the context stands. Settling
+        // stops the pointless retries; a change of track re-asks on its own.
+        this.queue = [];
+        this.queueNote = `Spotify reports no queue for this ${player.context ?? 'context'}.`;
         this.settle();
       } else {
         this.queue = [];
-        this.notice = degenerate
-          ? 'Spotify has not settled the queue yet.'
-          : player.idle
-            ? 'Spotify has no active device. Press play to wake it.'
-            : null;
+        this.queueNote = player.idle ? 'Spotify has no active device. Press play to wake it.' : null;
         this.hold();
       }
     } catch (error) {
@@ -177,10 +185,14 @@ export class Session {
    * A 204 means no device holds the playback. The local channel still knows the
    * track perfectly well, which is exactly the situation that reads as a bug.
    */
-  private async readPlayer(): Promise<{ idle: boolean; albumUri: string | null }> {
-    const body = await call<{ item: ApiTrack | null }>('/me/player');
-    if (body === null) return { idle: true, albumUri: null };
-    return { idle: false, albumUri: body.item?.album?.uri ?? null };
+  private async readPlayer(): Promise<{ idle: boolean; albumUri: string | null; context: string | null }> {
+    const body = await call<{ item: ApiTrack | null; context: { type: string } | null }>('/me/player');
+    if (body === null) return { idle: true, albumUri: null, context: null };
+    return {
+      idle: false,
+      albumUri: body.item?.album?.uri ?? null,
+      context: body.context?.type ?? null,
+    };
   }
 
   /**
@@ -219,11 +231,15 @@ function describe(error: unknown): string {
 /**
  * Whether a queue is worth believing.
  *
- * Spotify sometimes answers with the currently playing track repeated: ten
- * identical entries where the real queue is nothing like it. Nothing in the
- * response admits to this. It is a plain 200, every item carries `type: track`,
- * and the shape is exactly what a real answer looks like, so the only tell is
- * that every entry is the track already playing.
+ * When the context cannot yield a next track, Spotify pads the queue with the
+ * one already playing: ten identical entries where the desktop app is showing a
+ * perfectly good list of its own. A single track album does it reliably, and it
+ * answers that way for as long as that context stands, so this is a shape to
+ * recognise rather than a hiccup to wait out.
+ *
+ * Nothing in the response admits to it. It is a plain 200, every item carries
+ * `type: track`, and the shape is exactly what a real answer looks like, so the
+ * only tell is that every entry is the track already playing.
  *
  * Repeat one would produce that same shape honestly, which is why the local
  * channel's repeat flag is what separates a genuine answer from a confused one.

@@ -41,8 +41,16 @@ export interface Snapshot {
   saved: boolean | null;
   /** True once the queue is as deep as Spotify will ever report it. */
   queueTruncated: boolean;
-  /** Set when a channel failed, and shown in place of the action bar. */
+  /** Set when something went wrong. Replaces the action bar, because it needs reading. */
   notice: string | null;
+  /**
+   * Why the queue is empty, when there is a reason worth giving.
+   *
+   * This belongs in the list rather than the action bar. It explains a space on
+   * the screen rather than reporting a failure, and it can stand for a whole
+   * track, which is far too long for the keys to lose their place.
+   */
+  queueNote: string | null;
 }
 
 export const EMPTY: Snapshot = {
@@ -53,4 +61,5 @@ export const EMPTY: Snapshot = {
   saved: null,
   queueTruncated: false,
   notice: null,
+  queueNote: null,
 };
