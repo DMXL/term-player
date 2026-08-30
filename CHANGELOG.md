@@ -6,6 +6,12 @@ Nothing is written here until a release is cut. What goes in is drawn from the c
 
 The format otherwise follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the numbering follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). While the version stays below 1.0.0, anything may change between releases. The rules are in `CLAUDE.md`.
 
+## [0.1.1] - 2026-08-30
+
+### Fixed
+
+* Cover art fills its box instead of leaving a band of background down one edge.
+
 ## [0.1.0] - 2026-08-30
 
 First public release.
@@ -19,4 +25,5 @@ First public release.
 * Sizing that follows the window, dropping the cover when the queue needs the room.
 * Queue and saved state fetched only when the track changes or you press a key, never on a timer.
 
+[0.1.1]: https://github.com/DMXL/term-spotify/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/DMXL/term-spotify/releases/tag/v0.1.0
