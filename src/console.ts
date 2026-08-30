@@ -111,7 +111,12 @@ export async function run(): Promise<number> {
     else if (ch === 'k' || key.name === 'up') scroll = Math.max(0, scroll - 1);
     else if (ch === 'g') scroll = 0;
     else if (ch === 'G') scroll = maxScroll;
-    else if (ch === 'r') await session.refreshNow();
+    else if (ch === 'r') {
+      await session.refreshNow();
+      // `refreshNow` mutates the session, not this loop's snapshot, so pull it
+      // back in or `r` would not show the fresh queue until the next tick.
+      snap = await session.snapshot();
+    }
     else if (ch === 'a') {
       const album = session.album;
       if (album !== null) await local.open(album);
