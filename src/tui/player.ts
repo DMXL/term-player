@@ -2,6 +2,7 @@ import { clock, pad, truncate, widthOf } from '../core/format.js';
 import type { Snapshot } from '../core/model.js';
 import { bg, bold, clearLine, dim, fg, moveTo, reset } from './ansi.js';
 import type { Palette } from './theme.js';
+import { SPOTIFY_GREEN } from './theme.js';
 import { ASSUMED_CELL_RATIO, type Size } from './screen.js';
 
 /**
@@ -128,9 +129,10 @@ export function renderText(ctx: Ctx): string {
 
   const t = ctx.snap.track;
 
-  // Title, with the save mark held against the right edge.
-  const mark = ctx.snap.saved === null ? ' ' : ctx.snap.saved ? '♥' : '♡';
-  const markColour = ctx.snap.saved === true ? p.bright : p.muted;
+  // Title, with the saved dot held against the right edge. Green when saved,
+  // a muted hollow circle when not.
+  const mark = ctx.snap.saved === true ? '●' : '○';
+  const markColour = ctx.snap.saved === true ? SPOTIFY_GREEN : p.muted;
   const title = truncate(t.name, l.inner - 2);
   put(
     l.titleRow,
