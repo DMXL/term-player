@@ -115,8 +115,6 @@ export async function run(): Promise<number> {
     else if (ch === 'a') {
       const album = session.album;
       if (album !== null) await local.open(album);
-    } else if (ch === 't') {
-      if (snap.track !== null) await local.open(snap.track.uri);
     } else if (ch === 'f') {
       if (snap.track !== null) {
         try {

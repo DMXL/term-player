@@ -43,7 +43,6 @@ spot logout         # forget the stored grant
 |---|---|
 | `f` | Save the current track, or unsave it |
 | `a` | Open the current album in the Spotify app |
-| `t` | Open the current track in the Spotify app |
 | `j` / `k`, `↑` `↓` | Scroll the queue when it is taller than the window |
 | `g` / `G` | Jump to the top or bottom of the queue |
 | `r` | Refresh the queue and the saved state now |

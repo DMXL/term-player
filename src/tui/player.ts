@@ -214,7 +214,6 @@ function actions(ctx: Ctx): string {
   const keys: [string, string][] = [
     ['f', snap.saved === true ? 'unsave' : 'save'],
     ['a', 'album'],
-    ['t', 'track'],
     ['r', 'refresh'],
     ['?', 'keys'],
     ['q', 'quit'],
@@ -237,7 +236,6 @@ function help(ctx: Ctx, l: Layout): string {
   const entries: [string, string][] = [
     ['f', 'Save the current track, or unsave it'],
     ['a', 'Open the current album in the Spotify app'],
-    ['t', 'Open the current track in the Spotify app'],
     ['j k ↑ ↓', 'Scroll the queue'],
     ['g G', 'Jump to the top or bottom of the queue'],
     ['r', 'Refresh the queue and the saved state'],
