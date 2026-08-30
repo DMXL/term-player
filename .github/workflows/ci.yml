@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+
+      - run: pnpm build
+
+      # The layering is a rule about direction and nothing in the type system
+      # enforces it, so it is checked here instead.
+      - name: Check the layering
+        run: |
+          fail=0
+          check () {
+            if grep -rn -- "$1" "$2"; then
+              echo "::error::$3"
+              fail=1
+            fi
+          }
+          check "from '\.\./" src/core "core/ imports something outside itself"
+          check "from '.*spotify/" src/tui "tui/ imports spotify/"
+          check "from '.*tui/" src/spotify "spotify/ imports tui/"
+          exit $fail

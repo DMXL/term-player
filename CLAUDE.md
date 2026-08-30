@@ -51,6 +51,55 @@ grep -rn "from '.*tui/" src/spotify    # must be empty
 
 No source vocabulary in the view. Nothing in `tui/` may branch on where a field came from, which is what keeps the cheap local read and the expensive network read free to change without the picture caring.
 
+## Versioning, which every session takes part in
+
+This is public and numbered now, so a change that ships without a line in the changelog is a change nobody outside this repo will ever learn about. Adding that line is part of the work, not a step after it.
+
+### Every change a listener could notice gets a line
+
+Before you commit, add a bullet to `## [Unreleased]` in `CHANGELOG.md`, under `### Added`, `### Changed`, `### Fixed`, `### Removed`, `### Deprecated` or `### Security`. Create the heading if the release does not have one yet.
+
+Write it for someone who runs the console, not for someone reading the diff. "The queue no longer empties when the device goes idle" is a line. "Refactor `session.ts` polling" is not, because it names the file rather than the effect.
+
+What does not get a line: refactors nothing outside the repo can see, prose and comment edits, README or `CLAUDE.md` changes, and anything to do with the build that leaves the console behaving identically. The test is whether a user could tell. If they could not, leave the changelog alone.
+
+### What each number means
+
+The leading zero is a claim, and it is currently true: the shape is settled, the details are not, and anything may change between releases. While the version stays below 1.0.0:
+
+| What landed under `## [Unreleased]` | Bump |
+|---|---|
+| Only `Fixed`, or internal changes | patch, `0.1.0` to `0.1.1` |
+| Any `Added`, `Changed`, `Removed` or `Deprecated` | minor, `0.1.0` to `0.2.0` |
+| The bug hunt is over and the key map and CLI surface are ones we will keep | `1.0.0`, and it is a decision, not an increment |
+
+After 1.0.0 the rules become the ordinary ones. Major for a break in the key bindings, the `spot` subcommands, the shape of what is stored in the keychain, or the platform floor. Minor for a new capability that costs an existing user nothing. Patch for a fix alone.
+
+`pnpm release patch` refuses when `Unreleased` holds anything a listener would notice, so the table above is enforced rather than remembered. `--yes` overrides it and should be rare.
+
+### When a release is actually cut
+
+Not per fix. Most fixes sit in `Unreleased` until they are worth someone's attention as a group.
+
+Cut one when any of these is true:
+
+* `Unreleased` holds three or more entries and the tree is green.
+* Something in `Unreleased` is a capability, which is worth announcing on its own.
+* A fix repairs something that makes the console unusable, meaning it will not start, sign in is broken, or it shows wrong data as though it were right. That one ships alone and immediately.
+
+Do not cut a release to tidy up, and do not cut one with an empty `Unreleased`. The script refuses the second and you should refuse the first.
+
+### How
+
+```zsh
+pnpm release minor --dry-run   # rehearse: guards run, notes print, nothing is written
+pnpm release minor             # do it
+```
+
+It checks the tree is clean, that you are on `main`, that `Unreleased` has entries, that the bump matches them, and that `pnpm typecheck` passes. Only then does it move `Unreleased` into a dated section, bump `package.json`, commit, tag `vX.Y.Z`, push, and create the GitHub release with that section as its notes. A refusal writes nothing, so it is always safe to run.
+
+It reads the token from 1Password itself, because the `gh` on this machine is signed in as a different account that cannot write to `DMXL`.
+
 ## Prose
 
 No dashes as punctuation anywhere, including code comments and commit messages. Commas, periods, parentheses or separate sentences instead. Arithmetic in code is obviously fine.

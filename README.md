@@ -2,6 +2,8 @@
 
 A terminal Spotify console. One full screen: what is playing, its cover, how far through it is, and what is coming next. The transport stays on your media keys, so the console keeps only the two actions those keys cannot reach, which are saving a track and jumping to its album.
 
+**Status:** `v0.1.0`. The console runs and its shape is settled. The details are not, which is what the leading zero is saying, so anything may change between releases while the version stays below 1.0.0. What has changed and when is in [CHANGELOG.md](CHANGELOG.md).
+
 It reads from two places at once, and the split is the whole design. The desktop app answers over AppleScript for free, with no token and no rate limit, so everything that ticks every second comes from there. The Web API is asked only for the three things AppleScript has no words for: the queue, whether a track is saved, and the album's URI.
 
 ## Requirements
@@ -103,3 +105,34 @@ grep -rn "from '.*tui/" src/spotify    # must be empty
 ```
 
 The rule that matters most is the one about channels: nothing in `tui/` decides where a field came from. The view is handed a snapshot with a track and a queue in it, and whether each half arrived over a Unix socket or the network is settled before it ever gets there.
+
+## Versioning
+
+The numbering is [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and the log is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Every change a listener could notice earns a line in `CHANGELOG.md` under `## [Unreleased]` when it is committed, not when it is released.
+
+Below 1.0.0 the split is simple. A release carrying only fixes is a patch. A release carrying anything a listener would notice as new, different or gone is a minor. 1.0.0 arrives when the bug hunt is over and the keys and the `spot` subcommands are ones worth keeping.
+
+Releases are cut with one command, which refuses more often than it runs:
+
+```zsh
+pnpm release minor --dry-run   # rehearse: every guard runs, the notes print, nothing is written
+pnpm release minor             # do it
+```
+
+It checks the tree is clean, that you are on `main`, that `Unreleased` has entries, that the bump matches what those entries are, and that `pnpm typecheck` passes. Only then does it move `Unreleased` into a dated section, bump `package.json`, commit, tag, push, and open the [GitHub release](https://github.com/DMXL/term-spotify/releases) with that section as its notes.
+
+The full rules, including what does not earn a changelog line and when a release is worth cutting at all, are in `CLAUDE.md`, so that any session working here follows the same ones.
+
+## Development
+
+```zsh
+pnpm dev          # run the console from source
+pnpm typecheck    # the console and the release script
+pnpm build        # compile to dist/
+```
+
+CI runs the typecheck, the build, and the layering check on every push and pull request.
+
+## Licence
+
+[MIT](LICENSE).
