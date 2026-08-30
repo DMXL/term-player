@@ -1,3 +1,4 @@
+import { appendFile } from 'node:fs/promises';
 import { clientId, readTokens, refresh, type Tokens } from './auth.js';
 
 /**
@@ -65,11 +66,22 @@ export async function call<T>(path: string, options: CallOptions = {}): Promise<
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 
+  const text = res.status === 204 ? '' : await res.text();
+
+  // `SPOT_DEBUG=<file>` appends every exchange, which is the only way to catch
+  // an answer that is wrong rather than absent, since it is gone by the time
+  // anyone can look at the screen.
+  const log = process.env['SPOT_DEBUG'];
+  if (log !== undefined && log.length > 0) {
+    const line = `${new Date().toISOString()} ${options.method ?? 'GET'} ${url.pathname}${url.search} -> ${res.status} ${text}\n`;
+    await appendFile(log, line).catch(() => {
+      // Diagnostics must never take the console down with them.
+    });
+  }
+
   // The player endpoints answer 204 when there is simply nothing playing, which
   // is an ordinary state and not a failure.
   if (res.status === 204) return null;
-
-  const text = await res.text();
   if (!res.ok) {
     let reason: string | null = null;
     let message = text;

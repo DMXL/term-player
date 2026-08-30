@@ -1,5 +1,6 @@
 import { call, SpotifyError } from './spotify/client.js';
 import * as local from './spotify/local.js';
+import { ASSUMED_CELL_RATIO, measureCells } from './tui/screen.js';
 
 /**
  * Checks that the sources the console depends on still answer the way it reads
@@ -40,6 +41,17 @@ interface Track {
 }
 
 export async function probe(): Promise<void> {
+  // The terminal, which decides whether a square cover comes out square.
+  await check('terminal: cell ratio', async () => {
+    const m = await measureCells(false);
+    if (!process.stdout.isTTY) return 'not a terminal, so nothing to ask';
+    if (!m.answered) {
+      const shown = m.raw.length === 0 ? 'nothing' : JSON.stringify(m.raw);
+      return `no usable answer (said ${shown}), falling back to ${ASSUMED_CELL_RATIO}. Covers will have a band under them.`;
+    }
+    return `${m.ratio.toFixed(3)} tall per wide, measured`;
+  });
+
   // The local half, which owes nothing to the network.
   await check('applescript: running', async () => String(await local.isRunning()));
   await check('applescript: now playing', async () => {

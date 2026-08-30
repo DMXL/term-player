@@ -107,26 +107,22 @@ export class Session {
     if (this.inFlight) return;
     this.inFlight = true;
     try {
-      const queue = await this.readQueue();
+      // The player is read alongside the queue because it is the only honest
+      // signal about the device. The queue endpoint answers 200 with an empty
+      // list when there is nothing to ask, so on its own it cannot tell a
+      // sleeping device from a playlist that has run out.
+      const [queue, player] = await Promise.all([this.readQueue(), this.readPlayer()]);
+      if (player.albumUri !== null) this.albumUri = player.albumUri;
+      if (!queueOnly) this.saved = await this.readSaved(uri);
 
-      if (!queueOnly) {
-        const [saved, album] = await Promise.all([this.readSaved(uri), this.readAlbumUri()]);
-        this.saved = saved;
-        this.albumUri = album;
-      }
-
-      if (queue === null) {
-        // Spotify answered 204, which it does when no device is currently
-        // holding the playback. The local channel still knows the track, so the
-        // screen keeps everything but the list.
-        this.queue = [];
-        this.notice = 'Spotify has no active device for the queue. Press play to wake it.';
-        this.hold();
-      } else {
+      if (queue !== null && queue.length > 0) {
         this.queue = queue;
         this.notice = null;
-        if (queue.length === 0) this.hold();
-        else this.settle();
+        this.settle();
+      } else {
+        this.queue = [];
+        this.notice = player.idle ? 'Spotify has no active device. Press play to wake it.' : null;
+        this.hold();
       }
     } catch (error) {
       this.notice = describe(error);
@@ -166,12 +162,17 @@ export class Session {
   }
 
   /**
-   * The album URI is the one thing here that has to come over the network, since
-   * the scripting dictionary offers an album name and no identifier at all.
+   * Whether Spotify currently has a device to speak for, and the album URI while
+   * we are here, since that is the one thing the scripting dictionary cannot
+   * give us and this is the call that carries it.
+   *
+   * A 204 means no device holds the playback. The local channel still knows the
+   * track perfectly well, which is exactly the situation that reads as a bug.
    */
-  private async readAlbumUri(): Promise<string | null> {
+  private async readPlayer(): Promise<{ idle: boolean; albumUri: string | null }> {
     const body = await call<{ item: ApiTrack | null }>('/me/player');
-    return body?.item?.album?.uri ?? this.albumUri;
+    if (body === null) return { idle: true, albumUri: null };
+    return { idle: false, albumUri: body.item?.album?.uri ?? null };
   }
 
   /**
