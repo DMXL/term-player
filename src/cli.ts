@@ -1,8 +1,10 @@
 import { clientId, forget, login, readTokens, REDIRECT_URI } from './spotify/auth.js';
 import { probe } from './probe.js';
+import { run } from './console.js';
 
 const USAGE = `term-spotify
 
+  spot                     open the console
   spot login <client-id>   sign in, storing the grant in the login keychain
   spot status              whether there is a usable session, and for whom
   spot logout              forget the stored grant
@@ -50,9 +52,13 @@ async function main(argv: string[]): Promise<number> {
       return 0;
     }
 
+    case undefined: {
+      return await run();
+    }
+
     default: {
       process.stdout.write(USAGE);
-      return command === undefined || command === 'help' ? 0 : 1;
+      return command === 'help' ? 0 : 1;
     }
   }
 }
