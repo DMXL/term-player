@@ -62,6 +62,8 @@ Art renders inline on iTerm2 and Kitty. Everywhere else the space becomes a colo
 
 The window is measured on every frame and again whenever it changes. The cover takes a share of the height rather than a fixed number of rows, so a tall window gets a large cover and a short one gets a small cover instead of a clipped screen. Below a certain height the cover is dropped entirely and the queue takes the room, because a list you can read beats a picture you cannot.
 
+How wide the cover has to be for a square to come out square depends on the shape of a cell, which depends on the font. The terminal is asked at startup rather than assumed, since guessing at twice as tall as wide is close enough to look deliberate and wrong enough to leave a band of background along the bottom of every cover. A terminal that will not answer gets the guess, after a fifth of a second.
+
 ## Two channels, and why
 
 `src/spotify/local.ts` talks to the desktop app. It reads the track, the artists, the album, the cover URL, the duration, the position, the play state, the volume, shuffle and repeat, in one call. Position and volume are writable, which is what makes scrubbing possible without the network.
@@ -79,6 +81,7 @@ Gone, and not worth designing around: recommendations, related artists, audio fe
 Three limits shape this console directly:
 
 * The queue endpoint returns twenty upcoming items and no more, which is fewer than the desktop app shows. The panel says so rather than implying the list is complete.
+* Spotify lets a paused device go idle, and then answers the queue with nothing at all while still knowing the track. The console says so instead of showing an empty list, and keeps asking on a widening interval, so playing again fills it back in.
 * Search is capped at ten results per type, down from fifty.
 * The `product` field was removed from the profile, so Premium cannot be checked up front. A 403 on the first control is the only signal there is.
 

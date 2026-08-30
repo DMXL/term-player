@@ -2,7 +2,7 @@ import { clock, pad, truncate, widthOf } from '../core/format.js';
 import type { Snapshot } from '../core/model.js';
 import { bg, bold, clearLine, dim, fg, moveTo, reset } from './ansi.js';
 import type { Palette } from './theme.js';
-import type { Size } from './screen.js';
+import { ASSUMED_CELL_RATIO, type Size } from './screen.js';
 
 /**
  * The screen, as one place that decides what goes where.
@@ -36,13 +36,14 @@ export interface Layout {
   left: number;
 }
 
-export function layout({ cols, rows }: Size): Layout {
+export function layout({ cols, rows }: Size, ratio = ASSUMED_CELL_RATIO): Layout {
   const inner = Math.max(10, cols - MARGIN * 2);
 
   let cover = Math.min(MAX_COVER, rows - CHROME - MIN_QUEUE - 1);
   if (cover < MIN_COVER) cover = 0;
-  // A cover is twice as wide in cells as it is tall, and must still fit across.
-  if (cover > 0 && cover * 2 > inner) cover = Math.floor(inner / 2);
+  // A square cover needs as many columns as the cell ratio says, not a guessed
+  // two, and it still has to fit across.
+  if (cover > 0 && cover * ratio > inner) cover = Math.floor(inner / ratio);
   if (cover < MIN_COVER) cover = 0;
 
   const after = cover > 0 ? cover + 1 : 0;
@@ -51,7 +52,7 @@ export function layout({ cols, rows }: Size): Layout {
   return {
     cover,
     coverRow: 2,
-    coverCols: cover * 2,
+    coverCols: Math.round(cover * ratio),
     titleRow,
     queueRow: titleRow + 6,
     queueRows: Math.max(0, rows - CHROME - after),
@@ -67,6 +68,8 @@ interface Ctx {
   size: Size;
   scroll: number;
   showHelp: boolean;
+  /** Cell height as a multiple of cell width, measured from the terminal. */
+  ratio: number;
 }
 
 /** Colour codes only, since nothing handed to `put` carries cursor movement. */
@@ -105,7 +108,7 @@ function painter(ctx: Ctx, l: Layout): (row: number, text: string) => string {
  * position so the cover above it is never touched and never has to be resent.
  */
 export function renderText(ctx: Ctx): string {
-  const l = layout(ctx.size);
+  const l = layout(ctx.size, ctx.ratio);
   const { palette: p } = ctx;
   const rows: string[] = [];
   const paint = painter(ctx, l);
@@ -206,7 +209,7 @@ function queueLines(ctx: Ctx, l: Layout): string[] {
 function actions(ctx: Ctx): string {
   const { palette: p, snap } = ctx;
   if (snap.notice !== null && snap.track !== null) {
-    return `${fg(p.accent)}${truncate(snap.notice, layout(ctx.size).inner)}`;
+    return `${fg(p.accent)}${truncate(snap.notice, layout(ctx.size, ctx.ratio).inner)}`;
   }
 
   const keys: [string, string][] = [
@@ -218,7 +221,7 @@ function actions(ctx: Ctx): string {
     ['q', 'quit'],
   ];
 
-  const l = layout(ctx.size);
+  const l = layout(ctx.size, ctx.ratio);
   let out = '';
   let used = 0;
   for (const [key, label] of keys) {

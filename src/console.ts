@@ -3,7 +3,7 @@ import { EMPTY } from './core/model.js';
 import { bg, clearScreen, fg, home, moveTo, reset } from './tui/ansi.js';
 import { cover, draw, protocol, type Cover } from './tui/art.js';
 import { layout, renderText } from './tui/player.js';
-import { Screen } from './tui/screen.js';
+import { ASSUMED_CELL_RATIO, Screen } from './tui/screen.js';
 import { DEFAULT_PALETTE, paletteFrom, type Palette } from './tui/theme.js';
 import { Session } from './spotify/session.js';
 import * as local from './spotify/local.js';
@@ -33,6 +33,7 @@ export async function run(): Promise<number> {
   let palette: Palette = DEFAULT_PALETTE;
   let art: Cover | null = null;
   let drawnArtFor: string | null = null;
+  let ratio = ASSUMED_CELL_RATIO;
   let scroll = 0;
   let showHelp = false;
   let repaint = true;
@@ -40,7 +41,7 @@ export async function run(): Promise<number> {
 
   const paint = (): void => {
     const size = screen.size;
-    const l = layout(size);
+    const l = layout(size, ratio);
 
     if (repaint) {
       screen.write(bg(palette.ground) + clearScreen + home);
@@ -60,7 +61,7 @@ export async function run(): Promise<number> {
       drawnArtFor = want;
     }
 
-    screen.write(renderText({ snap, palette, size, scroll, showHelp }));
+    screen.write(renderText({ snap, palette, size, scroll, showHelp, ratio }));
   };
 
   const tick = async (): Promise<void> => {
@@ -88,7 +89,7 @@ export async function run(): Promise<number> {
   });
 
   const handle = async (key: { name: string; value?: string }): Promise<void> => {
-    const l = layout(screen.size);
+    const l = layout(screen.size, ratio);
     const maxScroll = Math.max(0, snap.queue.length + (snap.queueTruncated ? 1 : 0) - l.queueRows);
     const ch = key.name === 'char' ? key.value : undefined;
 
@@ -130,6 +131,8 @@ export async function run(): Promise<number> {
   };
 
   screen.start();
+  // Measured before the first frame, since it decides the cover's shape.
+  ratio = await screen.cellRatio();
   await tick();
 
   const timer = setInterval(() => {
