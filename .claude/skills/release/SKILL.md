@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a release of term-spotify. Works out what has changed since the last tag from the commits, proposes one changelog line per change a listener would notice, waits for the user to confirm each one is actually proved to work, then runs `pnpm release` to bump, tag, push and publish the GitHub release. Use ONLY when the user says "release", "cut a release", "ship a release", or invokes /release. Accepts an optional patch|minor|major argument; major is honoured only when explicitly given.
+description: Cut a release of term-player. Works out what has changed since the last tag from the commits, proposes one changelog line per change a listener would notice, waits for the user to confirm each one is actually proved to work, then runs `pnpm release` to bump, tag, push and publish the GitHub release. Use ONLY when the user says "release", "cut a release", "ship a release", or invokes /release. Accepts an optional patch|minor|major argument; major is honoured only when explicitly given.
 ---
 
 # Cutting a release
@@ -36,7 +36,7 @@ Then CI for the range:
 
 ```zsh
 export GH_TOKEN=$(op item get "PAT: DMXL" --fields token --reveal)
-gh run list --repo DMXL/term-spotify --limit 15 --json headSha,conclusion,displayTitle \
+gh run list --repo DMXL/term-player --limit 15 --json headSha,conclusion,displayTitle \
   --jq '.[] | "\(.headSha[0:7])  \(.conclusion)  \(.displayTitle)"'
 ```
 

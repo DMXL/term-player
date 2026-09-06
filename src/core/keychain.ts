@@ -12,7 +12,7 @@ const run = promisify(execFile);
  */
 
 function service(secret: string): string {
-  return `term-spotify: ${secret}`;
+  return `term-player: ${secret}`;
 }
 
 export async function readSecret(secret: string): Promise<string | null> {
@@ -32,7 +32,7 @@ export async function writeSecret(secret: string, value: string): Promise<void> 
     '-s',
     service(secret),
     '-a',
-    process.env['USER'] ?? 'term-spotify',
+    process.env['USER'] ?? 'term-player',
     '-w',
     value,
   ]);

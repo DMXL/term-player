@@ -1,17 +1,17 @@
 {
-  "name": "term-spotify",
+  "name": "term-player",
   "version": "0.2.0",
   "private": true,
-  "description": "A terminal Spotify console. Now playing, the queue, and the keys you actually use.",
+  "description": "A terminal music console. Now playing, the queue, and the keys you actually use.",
   "license": "MIT",
   "author": "Daniel Ke",
-  "homepage": "https://github.com/DMXL/term-spotify#readme",
+  "homepage": "https://github.com/DMXL/term-player#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DMXL/term-spotify.git"
+    "url": "git+https://github.com/DMXL/term-player.git"
   },
   "bugs": {
-    "url": "https://github.com/DMXL/term-spotify/issues"
+    "url": "https://github.com/DMXL/term-player/issues"
   },
   "keywords": [
     "spotify",
@@ -25,7 +25,7 @@
   "packageManager": "pnpm@11.9.0",
   "type": "module",
   "bin": {
-    "spot": "./dist/cli.js"
+    "term-player": "./dist/cli.js"
   },
   "scripts": {
     "dev": "tsx src/cli.ts",

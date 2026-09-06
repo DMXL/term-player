@@ -1,5 +1,5 @@
-import { call, SpotifyError } from './spotify/client.js';
-import * as local from './spotify/local.js';
+import { call, SpotifyError } from './players/spotify/client.js';
+import * as local from './players/spotify/local.js';
 import { ASSUMED_CELL_RATIO, measureCells } from './tui/screen.js';
 
 /**

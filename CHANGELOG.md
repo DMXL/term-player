@@ -41,6 +41,6 @@ First public release.
 * Sizing that follows the window, dropping the cover when the queue needs the room.
 * Queue and saved state fetched only when the track changes or you press a key, never on a timer.
 
-[0.2.0]: https://github.com/DMXL/term-spotify/compare/v0.1.1...v0.2.0
-[0.1.1]: https://github.com/DMXL/term-spotify/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/DMXL/term-spotify/releases/tag/v0.1.0
+[0.2.0]: https://github.com/DMXL/term-player/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/DMXL/term-player/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/DMXL/term-player/releases/tag/v0.1.0

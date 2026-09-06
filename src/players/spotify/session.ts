@@ -1,5 +1,7 @@
-import type { PlayerState, QueueItem, Snapshot } from '../core/model.js';
-import { EMPTY } from '../core/model.js';
+import type { PlayerState, QueueItem, Snapshot } from '../../core/model.js';
+import { EMPTY } from '../../core/model.js';
+import { BIN } from '../../core/command.js';
+import type { Player } from '../../core/player.js';
 import { call, NotSignedIn, SpotifyError } from './client.js';
 import * as local from './local.js';
 
@@ -24,7 +26,7 @@ interface ApiTrack {
   album?: { uri: string };
 }
 
-export class Session {
+export class Session implements Player {
   private fetchedFor: string | null = null;
   private fetchedState: PlayerState | null = null;
   private queue: QueueItem[] = [];
@@ -259,17 +261,18 @@ export class Session {
     return next;
   }
 
-  get album(): string | null {
-    return this.albumUri;
+  /** Opens the album for a URI in the desktop app. */
+  async openAlbum(uri: string): Promise<void> {
+    await local.open(uri);
   }
 }
 
 function describe(error: unknown): string {
-  if (error instanceof NotSignedIn) return 'Not signed in. Run `spot login <client-id>`.';
+  if (error instanceof NotSignedIn) return `Not signed in. Run \`${BIN} login <client-id>\`.`;
   if (error instanceof SpotifyError) {
     if (error.reason === 'PREMIUM_REQUIRED') return 'That needs Spotify Premium.';
     if (error.status === 429) return 'Spotify is rate limiting. Backing off.';
-    if (error.status === 401) return 'The session expired. Run `spot login` again.';
+    if (error.status === 401) return `The session expired. Run \`${BIN} login\` again.`;
     return `Spotify said ${error.status}: ${error.message}`;
   }
   return error instanceof Error ? error.message : String(error);

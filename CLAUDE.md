@@ -1,4 +1,4 @@
-# Working on term-spotify
+# Working on term-player
 
 ## Pushing
 
@@ -14,11 +14,11 @@ Keep it that way. Anything that redraws must not reach for the network, and `pro
 
 ## What the two channels can and cannot do
 
-`src/spotify/local.ts` is the desktop app over AppleScript. Its dictionary lives at `/Applications/Spotify.app/Contents/Resources/Spotify.sdef` and is worth rereading before assuming anything: it declares **zero** collections, so there is no queue and no playlist in it, `starred` is read only with a handler that raises AppleEvent error `-10000`, and there is an album name but no album URI.
+`src/players/spotify/local.ts` is the desktop app over AppleScript. Its dictionary lives at `/Applications/Spotify.app/Contents/Resources/Spotify.sdef` and is worth rereading before assuming anything: it declares **zero** collections, so there is no queue and no playlist in it, `starred` is read only with a handler that raises AppleEvent error `-10000`, and there is an album name but no album URI.
 
 Two traps in it. `duration` is milliseconds even though the dictionary says seconds, while `player position` really is seconds. And `artist` is one text field that holds only the primary artist, not every artist on the track, so the full list comes from the Web API.
 
-`src/spotify/client.ts` covers exactly the three gaps: the queue, the saved state, and the album URI. Do not widen it.
+`src/players/spotify/client.ts` covers exactly the three gaps: the queue, the saved state, and the album URI. Do not widen it.
 
 ## The library endpoints take query parameters
 
@@ -41,15 +41,21 @@ Better still, skip the terminal. `renderText` is pure: hand it a `Snapshot`, a p
 
 ## Layering, which is enforced by direction only
 
-`core/` imports nothing outside itself. `tui/` and `spotify/` each import `core/` and never each other. `cli.ts` and `console.ts` sit above. Check it before committing:
+`core/` imports nothing outside itself. `tui/` and `players/` each import `core/` and never each other. `cli.ts` and `console.ts` sit above, and `console.ts` drives a `Player` rather than a concrete player. Check it before committing:
 
 ```zsh
 grep -rn "from '\.\./" src/core        # must be empty
-grep -rn "from '.*spotify/" src/tui    # must be empty
-grep -rn "from '.*tui/" src/spotify    # must be empty
+grep -rn "from '.*players/" src/tui    # must be empty
+grep -rn "from '.*tui/" src/players    # must be empty
 ```
 
 No source vocabulary in the view. Nothing in `tui/` may branch on where a field came from, which is what keeps the cheap local read and the expensive network read free to change without the picture caring.
+
+## The player seam and the command name
+
+`src/core/player.ts` is the `Player` interface, and it is the only thing the console drives. `players/spotify/` is the first implementation; a new player is a new `players/<name>/` directory that implements the same interface, and nothing in `tui/` or `console.ts` changes.
+
+The binary name is `term-player`, but Daniel launches the console through a zsh function called `play`, which runs it from source and exports its own name as `TERM_PLAYER_BIN`. `src/core/command.ts` reads that, so every hint the console prints names the command that was actually typed.
 
 ## Versioning, and where the changelog comes from
 
@@ -73,7 +79,7 @@ The leading zero is a claim, and it is currently true: the shape is settled, the
 
 Small does not make a feature a patch. Whether a user could notice is the axis, not size.
 
-After 1.0.0 the rules become the ordinary ones. Major for a break in the key bindings, the `spot` subcommands, the shape of what is stored in the keychain, or the platform floor. Minor for a new capability that costs an existing user nothing. Patch for a fix alone.
+After 1.0.0 the rules become the ordinary ones. Major for a break in the key bindings, the `term-player` subcommands, the shape of what is stored in the keychain, or the platform floor. Minor for a new capability that costs an existing user nothing. Patch for a fix alone.
 
 ### Cutting one
 

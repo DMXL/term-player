@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
 import { execFile } from 'node:child_process';
-import { readSecret, writeSecret, deleteSecret } from '../core/keychain.js';
+import { readSecret, writeSecret, deleteSecret } from '../../core/keychain.js';
 
 /**
  * Authorization Code with PKCE, which is the only flow open to a client that
@@ -104,7 +104,7 @@ function awaitRedirect(state: string, openUrl: string): Promise<string> {
 
       const done = (message: string): void => {
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-        res.end(`<!doctype html><meta charset="utf-8"><title>term-spotify</title>
+        res.end(`<!doctype html><meta charset="utf-8"><title>term-player</title>
 <body style="font:16px system-ui;padding:3rem;color:#111">${message}</body>`);
         server.close();
       };

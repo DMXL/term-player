@@ -37,6 +37,6 @@ jobs:
             fi
           }
           check "from '\.\./" src/core "core/ imports something outside itself"
-          check "from '.*spotify/" src/tui "tui/ imports spotify/"
-          check "from '.*tui/" src/spotify "spotify/ imports tui/"
+          check "from '.*players/" src/tui "tui/ imports players/"
+          check "from '.*tui/" src/players "players/ imports tui/"
           exit $fail

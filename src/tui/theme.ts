@@ -21,11 +21,11 @@ export interface Palette {
 export const SEED: Rgb = { r: 88, g: 74, b: 102 };
 
 /**
- * Spotify's brand green, for the saved dot. Fixed rather than derived from
- * the cover, because the mark is a Spotify UI element and should read as one
- * no matter what the record looks like.
+ * Green, for the saved dot. Fixed rather than derived from the cover, because
+ * the mark is a state and should read as one no matter what the record looks
+ * like or which player is behind it.
  */
-export const SPOTIFY_GREEN: Rgb = { r: 29, g: 185, b: 84 };
+export const SAVED_GREEN: Rgb = { r: 29, g: 185, b: 84 };
 
 export function paletteFrom(seed: Rgb): Palette {
   // A near black ground keeps the terminal feeling like a terminal, but holding

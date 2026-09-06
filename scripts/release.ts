@@ -24,7 +24,7 @@ const MANIFEST = join(ROOT, 'package.json');
 
 /** The git on PATH is Canva's wrapper, which cannot authenticate a DMXL remote. */
 const GIT = '/opt/homebrew/bin/git';
-const REPO = 'DMXL/term-spotify';
+const REPO = 'DMXL/term-player';
 const BRANCH = 'main';
 const OP_ITEM = 'PAT: DMXL';
 

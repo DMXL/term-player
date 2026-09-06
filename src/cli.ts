@@ -1,14 +1,16 @@
-import { clientId, forget, login, readTokens, REDIRECT_URI } from './spotify/auth.js';
+import { clientId, forget, login, readTokens, REDIRECT_URI } from './players/spotify/auth.js';
+import { Session } from './players/spotify/session.js';
+import { BIN } from './core/command.js';
 import { probe } from './probe.js';
 import { run } from './console.js';
 
-const USAGE = `term-spotify
+const USAGE = `term-player
 
-  spot                     open the console
-  spot login <client-id>   sign in, storing the grant in the login keychain
-  spot status              whether there is a usable session, and for whom
-  spot logout              forget the stored grant
-  spot probe               check the sources still answer the way we read them
+  ${BIN}                     open the console
+  ${BIN} login <client-id>   sign in, storing the grant in the login keychain
+  ${BIN} status              whether there is a usable session, and for whom
+  ${BIN} logout              forget the stored grant
+  ${BIN} probe               check the sources still answer the way we read them
 
 The client id comes from https://developer.spotify.com/dashboard, and that app
 must list ${REDIRECT_URI} as a redirect URI.
@@ -21,7 +23,7 @@ async function main(argv: string[]): Promise<number> {
     case 'login': {
       const id = rest[0] ?? (await clientId());
       if (id === undefined || id === null) {
-        process.stderr.write('A client id is needed the first time: spot login <client-id>\n');
+        process.stderr.write(`A client id is needed the first time: ${BIN} login <client-id>\n`);
         return 1;
       }
       process.stdout.write('Opening Spotify to ask for access. Approve it in the browser.\n');
@@ -53,7 +55,7 @@ async function main(argv: string[]): Promise<number> {
     }
 
     case undefined: {
-      return await run();
+      return await run(new Session());
     }
 
     default: {

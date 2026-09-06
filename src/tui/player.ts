@@ -2,7 +2,7 @@ import { clock, pad, truncate, widthOf } from '../core/format.js';
 import type { Snapshot } from '../core/model.js';
 import { bg, bold, clearLine, dim, fg, moveTo, reset } from './ansi.js';
 import type { Palette } from './theme.js';
-import { SPOTIFY_GREEN } from './theme.js';
+import { SAVED_GREEN } from './theme.js';
 import { ASSUMED_CELL_RATIO, type Size } from './screen.js';
 
 /**
@@ -120,7 +120,7 @@ export function renderText(ctx: Ctx): string {
   if (ctx.showHelp) return help(ctx, l);
 
   if (ctx.snap.track === null) {
-    const message = ctx.snap.notice ?? 'Nothing playing. Start something in Spotify.';
+    const message = ctx.snap.notice ?? 'Nothing playing.';
     const row = Math.floor(ctx.size.rows / 2);
     put(row, `${fg(p.muted)}${truncate(message, l.inner)}`);
     put(l.actionRow, actions(ctx));
@@ -132,7 +132,7 @@ export function renderText(ctx: Ctx): string {
   // Title, with the saved dot held against the right edge. Green when saved,
   // a muted hollow circle when not.
   const mark = ctx.snap.saved === true ? '●' : '○';
-  const markColour = ctx.snap.saved === true ? SPOTIFY_GREEN : p.muted;
+  const markColour = ctx.snap.saved === true ? SAVED_GREEN : p.muted;
   const title = truncate(t.name, l.inner - 2);
   put(
     l.titleRow,
@@ -235,7 +235,7 @@ function help(ctx: Ctx, l: Layout): string {
   const { palette: p } = ctx;
   const entries: [string, string][] = [
     ['f', 'Save the current track, or unsave it'],
-    ['a', 'Open the current album in the Spotify app'],
+    ['a', 'Open the current album in the app'],
     ['j k ↑ ↓', 'Scroll the queue'],
     ['g G', 'Jump to the top or bottom of the queue'],
     ['r', 'Refresh the queue and the saved state'],

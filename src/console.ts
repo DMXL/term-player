@@ -5,11 +5,12 @@ import { cover, draw, protocol, type Cover } from './tui/art.js';
 import { layout, renderText } from './tui/player.js';
 import { ASSUMED_CELL_RATIO, Screen } from './tui/screen.js';
 import { DEFAULT_PALETTE, paletteFrom, type Palette } from './tui/theme.js';
-import { Session } from './spotify/session.js';
-import * as local from './spotify/local.js';
+import type { Player } from './core/player.js';
+import { BIN } from './core/command.js';
 
 /**
- * The run loop, and the only place that knows about both halves at once.
+ * The run loop. It drives a `Player` and knows nothing about which player is
+ * behind it, which is what lets the same screen front any of them.
  *
  * The cover is expensive to send and never changes within a track, so it is
  * drawn once and then left alone. Everything that moves is repainted by
@@ -19,14 +20,13 @@ import * as local from './spotify/local.js';
 
 const TICK_MS = 500;
 
-export async function run(): Promise<number> {
+export async function run(player: Player): Promise<number> {
   if (!process.stdout.isTTY) {
-    process.stderr.write('The console needs a terminal. Try `spot probe` instead.\n');
+    process.stderr.write(`The console needs a terminal. Try \`${BIN} probe\` instead.\n`);
     return 1;
   }
 
   const screen = new Screen();
-  const session = new Session();
   const how = protocol();
 
   let snap: Snapshot = EMPTY;
@@ -65,7 +65,7 @@ export async function run(): Promise<number> {
   };
 
   const tick = async (): Promise<void> => {
-    const next = await session.snapshot();
+    const next = await player.snapshot();
     const changed = next.track?.uri !== snap.track?.uri;
     snap = next;
 
@@ -112,18 +112,18 @@ export async function run(): Promise<number> {
     else if (ch === 'g') scroll = 0;
     else if (ch === 'G') scroll = maxScroll;
     else if (ch === 'r') {
-      await session.refreshNow();
-      // `refreshNow` mutates the session, not this loop's snapshot, so pull it
+      await player.refreshNow();
+      // `refreshNow` mutates the player, not this loop's snapshot, so pull it
       // back in or `r` would not show the fresh queue until the next tick.
-      snap = await session.snapshot();
+      snap = await player.snapshot();
     }
     else if (ch === 'a') {
-      const album = session.album;
-      if (album !== null) await local.open(album);
+      const album = snap.track?.albumUri ?? null;
+      if (album !== null) await player.openAlbum(album);
     } else if (ch === 'f') {
       if (snap.track !== null) {
         try {
-          snap = { ...snap, saved: await session.toggleSaved(snap.track.uri) };
+          snap = { ...snap, saved: await player.toggleSaved(snap.track.uri) };
         } catch {
           snap = { ...snap, notice: 'That save did not take.' };
         }

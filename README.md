@@ -1,6 +1,6 @@
-# term-spotify
+# term-player
 
-A terminal Spotify console. One full screen: what is playing, its cover, how far through it is, and what is coming next. The transport stays on your media keys, so the console keeps only the two actions those keys cannot reach, which are saving a track and jumping to its album.
+A terminal music console. One full screen: what is playing, its cover, how far through it is, and what is coming next. The transport stays on your media keys, so the console keeps only the two actions those keys cannot reach, which are saving a track and jumping to its album.
 
 **Status:** `v0.1.0`. The console runs and its shape is settled. The details are not, which is what the leading zero is saying, so anything may change between releases while the version stays below 1.0.0. What has changed and when is in [CHANGELOG.md](CHANGELOG.md).
 
@@ -23,7 +23,7 @@ The `localhost` hostname stopped being accepted in February 2025, so the loopbac
 ```zsh
 pnpm install
 pnpm build
-spot login <client-id>
+term-player login <client-id>
 ```
 
 Sign in opens your browser once. The grant lands in the login keychain rather than a dotfile, since a refresh token is a durable hold on the account, and the access token is renewed a minute before it lapses without asking you again.
@@ -31,10 +31,10 @@ Sign in opens your browser once. The grant lands in the login keychain rather th
 ## Usage
 
 ```zsh
-spot                # open the console
-spot status         # whether there is a usable session, and for whom
-spot probe          # check the sources still answer the way the console reads them
-spot logout         # forget the stored grant
+term-player                # open the console
+term-player status         # whether there is a usable session, and for whom
+term-player probe          # check the sources still answer the way the console reads them
+term-player logout         # forget the stored grant
 ```
 
 ### Keys
@@ -63,7 +63,7 @@ Art renders inline on iTerm2 and Kitty. Everywhere else the space becomes a colo
 
 The window is measured on every frame and again whenever it changes. The cover takes a share of the height rather than a fixed number of rows, so a tall window gets a large cover and a short one gets a small cover instead of a clipped screen. Below a certain height the cover is dropped entirely and the queue takes the room, because a list you can read beats a picture you cannot.
 
-How wide the cover has to be for a square to come out square depends on the shape of a cell, which depends on the font, so the terminal is asked at startup rather than assumed. `spot probe` reports what it said, and whether it answered at all.
+How wide the cover has to be for a square to come out square depends on the shape of a cell, which depends on the font, so the terminal is asked at startup rather than assumed. `term-player probe` reports what it said, and whether it answered at all.
 
 The cover is then sent with both dimensions and no preserving of the aspect ratio, so it fills the box it is given. Any mismatch between the shape of the box and the shape of the cover has to go somewhere, and preserving the ratio puts it into a band of background along whichever edge has the slack. Filling puts it into the picture instead, where a couple of percent is invisible and a band is not. A terminal that will not report its cell size therefore gives a very slightly wide cover rather than a bordered one.
 
@@ -71,15 +71,15 @@ Leaving a dimension out is not the escape it appears to be. Unspecified means `a
 
 ## Two channels, and why
 
-`src/spotify/local.ts` talks to the desktop app. It reads the track, the artists, the album, the cover URL, the duration, the position, the play state, the volume, shuffle and repeat, in one call. Position and volume are writable, which is what makes scrubbing possible without the network.
+`src/players/spotify/local.ts` talks to the desktop app. It reads the track, the artists, the album, the cover URL, the duration, the position, the play state, the volume, shuffle and repeat, in one call. Position and volume are writable, which is what makes scrubbing possible without the network.
 
 What that channel cannot do is anything plural. The app's scripting dictionary declares no collections at all and never mentions a queue or a playlist, so `current track` is the only track it will hand over. Its `starred` property is read only and its handler is dead outright, so saving cannot happen there either. It offers the album's name as text but no album URI.
 
-`src/spotify/client.ts` covers exactly those gaps and nothing else. The queue only changes when the track does or when you act, so it is fetched on those events rather than on a timer, and the second by second redraw never touches the network. That matters because Development Mode sits on the low rate limit tier.
+`src/players/spotify/client.ts` covers exactly those gaps and nothing else. The queue only changes when the track does or when you act, so it is fetched on those events rather than on a timer, and the second by second redraw never touches the network. That matters because Development Mode sits on the low rate limit tier.
 
 ## What Spotify no longer offers
 
-Much of what a music client would want has been withdrawn, in November 2024 and again in February 2026. `spot probe` checks the live API rather than the documentation, which still lists endpoints that answer 403.
+Much of what a music client would want has been withdrawn, in November 2024 and again in February 2026. `term-player probe` checks the live API rather than the documentation, which still lists endpoints that answer 403.
 
 Gone, and not worth designing around: recommendations, related artists, audio features and analysis, thirty second previews, featured and category playlists, new releases, artist top tracks, batch fetches, and other users' profiles and playlists. Discover Weekly, Release Radar and the rest of Made for You answer 404, because Spotify owns those playlists rather than you.
 
@@ -98,12 +98,12 @@ Extended quota, which would lift these, requires 250,000 monthly active users an
 
 ## Layering
 
-`core/` imports nothing outside itself. `tui/` and `spotify/` each import `core/` and never each other. `cli.ts` sits above all three. Check it before committing:
+`core/` imports nothing outside itself. `tui/` and `players/` each import `core/` and never each other. `cli.ts` and `console.ts` sit above, and `console.ts` drives a `Player` rather than a concrete player. Check it before committing:
 
 ```zsh
 grep -rn "from '\.\./" src/core        # must be empty
-grep -rn "from '.*spotify/" src/tui    # must be empty
-grep -rn "from '.*tui/" src/spotify    # must be empty
+grep -rn "from '.*players/" src/tui    # must be empty
+grep -rn "from '.*tui/" src/players    # must be empty
 ```
 
 The rule that matters most is the one about channels: nothing in `tui/` decides where a field came from. The view is handed a snapshot with a track and a queue in it, and whether each half arrived over a Unix socket or the network is settled before it ever gets there.
@@ -114,7 +114,7 @@ The numbering is [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and 
 
 The reason is that a commit is not proof. CI typechecks, builds and checks the layering, but it cannot tell whether the console looks right with music playing. So the changelog is written at release time, drawn from the commits since the last tag, with each line confirmed as a change somebody actually saw working. A line in there is something checked, not merely something committed. Which makes the commit message the real record, since it is what the release reads.
 
-Below 1.0.0 the split is simple. Fixes alone are a patch. Anything a listener would notice as new, different or gone is a minor, however small. 1.0.0 arrives when the bug hunt is over and the keys and the `spot` subcommands are ones worth keeping.
+Below 1.0.0 the split is simple. Fixes alone are a patch. Anything a listener would notice as new, different or gone is a minor, however small. 1.0.0 arrives when the bug hunt is over and the keys and the `term-player` subcommands are ones worth keeping.
 
 A release is cut in one step, `/release`, which reads the range, proposes a line per change, waits for confirmation, and then runs:
 
@@ -122,7 +122,7 @@ A release is cut in one step, `/release`, which reads the range, proposes a line
 pnpm release minor --notes-file <path>
 ```
 
-That refuses a dirty tree, a branch that is not `main`, notes that are empty or overlong, a patch standing over entries a listener would notice, a silent `0.x` to `1.0.0`, and a failing typecheck. It writes nothing until every one of them passes, so a refusal is always safe. Then it writes the dated section, bumps `package.json`, commits, tags, pushes both, and opens the [GitHub release](https://github.com/DMXL/term-spotify/releases) with those notes.
+That refuses a dirty tree, a branch that is not `main`, notes that are empty or overlong, a patch standing over entries a listener would notice, a silent `0.x` to `1.0.0`, and a failing typecheck. It writes nothing until every one of them passes, so a refusal is always safe. Then it writes the dated section, bumps `package.json`, commits, tags, pushes both, and opens the [GitHub release](https://github.com/DMXL/term-player/releases) with those notes.
 
 The full rules are in `CLAUDE.md` and `.claude/skills/release/SKILL.md`, so that any session working here follows the same ones.
 

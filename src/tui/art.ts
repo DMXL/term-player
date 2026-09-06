@@ -36,7 +36,7 @@ export function protocol(): Protocol {
   return 'none';
 }
 
-const dir = join(tmpdir(), 'term-spotify-art');
+const dir = join(tmpdir(), 'term-player-art');
 
 /**
  * Covers are immutable at their URL, so one that has been fetched once is read

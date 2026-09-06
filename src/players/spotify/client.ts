@@ -1,4 +1,5 @@
 import { appendFile } from 'node:fs/promises';
+import { BIN } from '../../core/command.js';
 import { clientId, readTokens, refresh, type Tokens } from './auth.js';
 
 /**
@@ -25,7 +26,7 @@ export class SpotifyError extends Error {
 
 export class NotSignedIn extends Error {
   constructor() {
-    super('Not signed in. Run `spot login <client-id>` first.');
+    super(`Not signed in. Run \`${BIN} login <client-id>\` first.`);
     this.name = 'NotSignedIn';
   }
 }
