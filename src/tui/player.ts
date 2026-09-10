@@ -193,10 +193,15 @@ function queueLines(ctx: Ctx, l: Layout): string[] {
     const artistRoom = textCol - widthOf(shownName) - widthOf(joiner);
     const shownArtist = artistRoom > 0 ? truncate(item.artist, artistRoom) : '';
 
+    // Unplayable entries are shown in muted grey rather than hidden, so the
+    // daily mix stays whole on screen even where it cannot be listened to.
+    const nameColour = item.disabled === true ? p.muted : p.text;
+    const artistColour = item.disabled === true ? p.muted : p.accent;
+
     const text =
       shownArtist.length > 0
-        ? `${fg(p.text)}${shownName}${fg(p.muted)}${joiner}${fg(p.accent)}${shownArtist}`
-        : `${fg(p.text)}${shownName}`;
+        ? `${fg(nameColour)}${shownName}${fg(p.muted)}${joiner}${fg(artistColour)}${shownArtist}`
+        : `${fg(nameColour)}${shownName}`;
     const used = widthOf(shownName) + (shownArtist.length > 0 ? widthOf(joiner) + widthOf(shownArtist) : 0);
 
     return `${text}${bg(ctx.palette.ground)}${' '.repeat(Math.max(1, l.inner - used - timeCol))}${fg(p.muted)}${time}`;
@@ -212,6 +217,9 @@ function actions(ctx: Ctx): string {
   }
 
   const keys: [string, string][] = [
+    ['space', snap.state === 'playing' ? 'pause' : 'play'],
+    ['n', 'next'],
+    ['p', 'prev'],
     ['f', snap.saved === true ? 'unsave' : 'save'],
     ['a', 'album'],
     ['r', 'refresh'],
@@ -234,6 +242,9 @@ function actions(ctx: Ctx): string {
 function help(ctx: Ctx, l: Layout): string {
   const { palette: p } = ctx;
   const entries: [string, string][] = [
+    ['space', 'Play or pause'],
+    ['n', 'Next track'],
+    ['p', 'Previous track'],
     ['f', 'Save the current track, or unsave it'],
     ['a', 'Open the current album in the app'],
     ['j k ↑ ↓', 'Scroll the queue'],

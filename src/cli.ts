@@ -1,6 +1,10 @@
 import { clientId, forget, login, readTokens, REDIRECT_URI } from './players/spotify/auth.js';
-import { Session } from './players/spotify/session.js';
+import { Session as SpotifySession } from './players/spotify/session.js';
+import * as spotifyLocal from './players/spotify/local.js';
+import { Session as NeteaseSession } from './players/netease/session.js';
+import * as neteaseLocal from './players/netease/local.js';
 import { BIN } from './core/command.js';
+import type { Player } from './core/player.js';
 import { probe } from './probe.js';
 import { run } from './console.js';
 
@@ -15,6 +19,30 @@ const USAGE = `term-player
 The client id comes from https://developer.spotify.com/dashboard, and that app
 must list ${REDIRECT_URI} as a redirect URI.
 `;
+
+/**
+ * Picks which player fronts the console on the no argument path.
+ *
+ * `TERM_PLAYER_PROVIDER` forces one, for when the guess is wrong. Otherwise
+ * Spotify wins only when it is open and has something playing right now, because
+ * a paused Spotify and a NetEase that is ready are better served by NetEase.
+ * Spotify is checked for running first, since asking its `current track` would
+ * launch the app, and a closed Spotify must fall through to NetEase. NetEase is
+ * chosen when ncm-cli and mpv are there to drive it, and Spotify is the fallback
+ * when they are not.
+ */
+async function detectProvider(): Promise<Player> {
+  const forced = process.env['TERM_PLAYER_PROVIDER'];
+  if (forced === 'netease') return new NeteaseSession();
+  if (forced === 'spotify') return new SpotifySession();
+
+  if (await spotifyLocal.isRunning()) {
+    const spotify = await spotifyLocal.nowPlaying();
+    if (spotify !== null && spotify.state === 'playing') return new SpotifySession();
+  }
+  if (await neteaseLocal.isAvailable()) return new NeteaseSession();
+  return new SpotifySession();
+}
 
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
@@ -55,7 +83,7 @@ async function main(argv: string[]): Promise<number> {
     }
 
     case undefined: {
-      return await run(new Session());
+      return await run(await detectProvider());
     }
 
     default: {

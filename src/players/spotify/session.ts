@@ -265,6 +265,18 @@ export class Session implements Player {
   async openAlbum(uri: string): Promise<void> {
     await local.open(uri);
   }
+
+  async playPause(): Promise<void> {
+    await local.playpause();
+  }
+
+  async next(): Promise<void> {
+    await local.next();
+  }
+
+  async previous(): Promise<void> {
+    await local.previous();
+  }
 }
 
 function describe(error: unknown): string {

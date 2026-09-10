@@ -111,7 +111,19 @@ export async function run(player: Player): Promise<number> {
     else if (ch === 'k' || key.name === 'up') scroll = Math.max(0, scroll - 1);
     else if (ch === 'g') scroll = 0;
     else if (ch === 'G') scroll = maxScroll;
-    else if (ch === 'r') {
+    else if (ch === ' ') {
+      await player.playPause();
+      await tick();
+      return;
+    } else if (ch === 'n') {
+      await player.next();
+      await tick();
+      return;
+    } else if (ch === 'p') {
+      await player.previous();
+      await tick();
+      return;
+    } else if (ch === 'r') {
       await player.refreshNow();
       // `refreshNow` mutates the player, not this loop's snapshot, so pull it
       // back in or `r` would not show the fresh queue until the next tick.

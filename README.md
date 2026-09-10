@@ -1,6 +1,12 @@
 # term-player
 
-A terminal music console. One full screen: what is playing, its cover, how far through it is, and what is coming next. The transport stays on your media keys, so the console keeps only the two actions those keys cannot reach, which are saving a track and jumping to its album.
+A terminal music console. One full screen: what is playing, its cover, how far through it is, and what is coming next. Transport, saving a track and jumping to its album are one key away.
+
+## Providers
+
+The console fronts either Spotify or NetEase Music behind the same screen. It picks on launch: Spotify when it is open and playing right now, NetEase otherwise, and Spotify again when NetEase cannot be driven. Set `TERM_PLAYER_PROVIDER=netease` or `TERM_PLAYER_PROVIDER=spotify` to force one.
+
+NetEase is wrapped, not reimplemented. [ncm-cli](https://github.com/NetEase/ncm-cli) owns the account, the playback and the API, so term-player only reads its `state` and its daily mix. On a cold start it loads the daily recommended list and leaves it queued but not playing.
 
 **Status:** `v0.1.0`. The console runs and its shape is settled. The details are not, which is what the leading zero is saying, so anything may change between releases while the version stays below 1.0.0. What has changed and when is in [CHANGELOG.md](CHANGELOG.md).
 
@@ -41,15 +47,18 @@ term-player logout         # forget the stored grant
 
 | Key | Action |
 |---|---|
+| `space` | Play or pause |
+| `n` | Next track |
+| `p` | Previous track |
 | `f` | Save the current track, or unsave it |
-| `a` | Open the current album in the Spotify app |
+| `a` | Open the current album in the app |
 | `j` / `k`, `↑` `↓` | Scroll the queue when it is taller than the window |
 | `g` / `G` | Jump to the top or bottom of the queue |
 | `r` | Refresh the queue and the saved state now |
 | `?` | Key reference |
 | `q` | Quit |
 
-Play, pause, next and previous are deliberately unbound. The media keys already reach the desktop app, and a second way to do the same thing is worth less than the keys it costs.
+The transport keys are here because mpv, the NetEase backend, does not hook the macOS media keys the way the Spotify app does. When Spotify is the player the media keys still work too.
 
 ## What it looks like
 
@@ -76,6 +85,14 @@ Leaving a dimension out is not the escape it appears to be. Unspecified means `a
 What that channel cannot do is anything plural. The app's scripting dictionary declares no collections at all and never mentions a queue or a playlist, so `current track` is the only track it will hand over. Its `starred` property is read only and its handler is dead outright, so saving cannot happen there either. It offers the album's name as text but no album URI.
 
 `src/players/spotify/client.ts` covers exactly those gaps and nothing else. The queue only changes when the track does or when you act, so it is fetched on those events rather than on a timer, and the second by second redraw never touches the network. That matters because Development Mode sits on the low rate limit tier.
+
+## NetEase
+
+The NetEase half is a thin wrapper over [ncm-cli](https://github.com/NetEase/ncm-cli), which owns the account, the playback and the API. Sign in once with `ncm-cli login` and scan the QR code; term-player stores nothing. It needs ncm-cli and [mpv](https://mpv.io) installed (`brew install mpv`), and playback runs through mpv, which is also the queue. mpv does not answer the macOS media keys, so play, pause and skip are bound to keys in the console instead.
+
+Two reads feed the screen. `ncm-cli state` is the per tick source, a local read of the live mpv process with no rate limit, giving the title, position, duration and play state. `ncm-cli recommend daily` runs once, at cold start, to fetch the daily mix with its full metadata, which is the one thing `state` cannot give. That list is held in memory, because there is no per song command to read the artist, album or artwork again, so a track played outside the daily mix degrades to its `"name - artist"` title with no album, cover or saved state. Songs with no audio source are shown greyed in the queue rather than dropped, and playback skips over them.
+
+On a cold start, with nothing playing, the console plays the first daily song just long enough to give mpv a process, pauses it, then queues the rest, leaving the mix ready and not playing. The daily list is cached for the day, so reopening the console does not re fetch it. There is no album to open, so `a` does nothing here, and only the daily mix's tracks can be saved.
 
 ## What Spotify no longer offers
 

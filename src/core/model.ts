@@ -28,6 +28,8 @@ export interface QueueItem {
   artist: string;
   /** Milliseconds. */
   duration: number;
+  /** True when the item is shown but cannot be played, so it is skipped. */
+  disabled?: boolean;
 }
 
 export interface Snapshot {

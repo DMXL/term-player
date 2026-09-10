@@ -20,4 +20,13 @@ export interface Player {
 
   /** Opens the album for a URI in the player's own app, where it has one. */
   openAlbum(uri: string): Promise<void>;
+
+  /** Toggles play and pause. */
+  playPause(): Promise<void>;
+
+  /** Skips to the next track. */
+  next(): Promise<void>;
+
+  /** Skips back to the previous track. */
+  previous(): Promise<void>;
 }

@@ -53,9 +53,34 @@ No source vocabulary in the view. Nothing in `tui/` may branch on where a field 
 
 ## The player seam and the command name
 
-`src/core/player.ts` is the `Player` interface, and it is the only thing the console drives. `players/spotify/` is the first implementation; a new player is a new `players/<name>/` directory that implements the same interface, and nothing in `tui/` or `console.ts` changes.
+`src/core/player.ts` is the `Player` interface, and it is the only thing the console drives. `players/spotify/` and `players/netease/` are the two implementations; a new player is a new `players/<name>/` directory that implements the same interface, and nothing in `tui/` or `console.ts` changes.
+
+Which one fronts the console is decided in `src/cli.ts` `detectProvider()`, on the no argument path only: `TERM_PLAYER_PROVIDER` forces one, otherwise Spotify when it is open and has something playing right now, otherwise NetEase when `ncm-cli` and `mpv` are installed, otherwise Spotify. Spotify is checked for running before asking its `current track`, because that AppleScript call would launch a closed app, and a closed Spotify must fall through to NetEase.
 
 The binary name is `term-player`, but Daniel launches the console through a zsh function called `play`, which runs it from source and exports its own name as `TERM_PLAYER_BIN`. `src/core/command.ts` reads that, so every hint the console prints names the command that was actually typed.
+
+## The NetEase player wraps ncm-cli
+
+`players/netease/` does not reimplement the NetEase API. [ncm-cli](https://github.com/NetEase/ncm-cli) owns the account, the playback and the API, so term-player only shells it. It needs ncm-cli and [mpv](https://mpv.io) installed (`brew install mpv`), and sign in is `ncm-cli login` with a QR code, after which term-player stores nothing.
+
+Two reads feed the screen, and a third file keeps them honest. `ncm-cli state` is the per tick source, a local read of the live mpv process with no rate limit, giving the title, position, duration and play state. `~/.config/ncm-cli/queue.json` is read alongside it to get the queue in play order with reliable encrypted ids. `ncm-cli recommend daily` runs once, at cold start, to fetch the daily mix with full metadata, which is the one thing `state` cannot give. The list is held in memory keyed by song id, because there is no per song command to re read the artist, album or artwork later.
+
+The daily mix is cached in `~/.config/term-player/daily-mix.json` keyed by day, so a reopening within the same day does not re fetch it. `r` clears the cache and re fetches, then rebuilds the queue. A cold start, with nothing playing, plays the first daily song just long enough to give mpv a process, pauses it, then queues the rest, so the queue building stays silent. `queue add` refuses to run until there is a playback process, which is why the first song is played (then paused) before the rest are queued.
+
+The quirks worth knowing before touching this code:
+
+* `state` has no `paused` value. `pause` reports `status: "stopped"` while retaining `position` and `queueLength`; `stop` clears the queue (`queueLength: 0`). So `paused` vs `stopped` is read from `queueLength > 0`, not from `status`.
+* A stopped `state` omits `title` and `duration` entirely, so both fields are nullable and must be defaulted.
+* `position` and `duration` are seconds (fractional); the model wants milliseconds, so multiply by 1000.
+* `song like` and `song dislike` take `--songId <encryptedId>`, not `--encrypted-id`.
+* `recommend daily --limit N` returns `{ code: 200, data: Song[] }`; a song's `duration` is already milliseconds there, and `coverImgUrl` is `http://` and needs upgrading to `https`.
+* A song's `id` is the 32 hex encrypted id, and `originalId` is the numeric one; `play` and `queue add` want both, `like`/`dislike` want only the encrypted one.
+* Songs with `playFlag: false` (no audio source or no permission) are shown in the queue greyed but not queued, since ncm-cli would skip them and playing one first would leave the transport keys pointing at nothing. A `playFlag: true` song can still be skipped at play time when its URL fetch fails, so the current song is resolved through `queue.json` by encrypted id, while the queue itself is drawn from the full daily mix order and unplayable entries carry a `disabled` flag for the view.
+* There is no album to open, so `openAlbum` is a no-op, and `toggleSaved` only works for songs from the daily mix in memory.
+* mpv outlives the console, so a fresh launch can find a queue already populated. The mix is then fetched on demand, without re queueing, so the persisted queue can still be described.
+* The view is capped at the next twenty songs, and a cold start is held behind a loading state until it has queued them all, so the list appears whole rather than one song at a time.
+* mpv does not answer the macOS media keys, so play, pause and skip are bound to keys (`space`, `n`, `p`) on the `Player` interface. ncm-cli has no single toggle, so `playPause` reads the last seen state and calls `pause` or `resume` accordingly.
+* ncm-cli's player daemon can answer its first `play` with `daemon 无响应` while it spins up, which leaves an empty player and every transport key pointing at nothing. `startFirst` polls for a title after each play, since the daemon can take several seconds to resolve the song's URL and a title is the one signal the song actually loaded.
 
 ## Versioning, and where the changelog comes from
 
