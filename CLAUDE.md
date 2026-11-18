@@ -82,6 +82,10 @@ The quirks worth knowing before touching this code:
 * mpv does not answer the macOS media keys, so play, pause and skip are bound to keys (`space`, `n`, `p`) on the `Player` interface. ncm-cli has no single toggle, so `playPause` reads the last seen state and calls `pause` or `resume` accordingly.
 * ncm-cli's player daemon can answer its first `play` with `daemon 无响应` while it spins up, which leaves an empty player and every transport key pointing at nothing. `startFirst` polls for a title after each play, since the daemon can take several seconds to resolve the song's URL and a title is the one signal the song actually loaded.
 
+## The colour broadcast is a public file format
+
+`src/broadcast.ts` writes `~/.config/term-player/palette.json` for other terminal apps to follow, and danni-the-bot reads it. Treat the shape as an interface: a reader validates `version`, so anything a reader would have to know about bumps it. It is published from `tick` and deduplicated on the ground colour, so it touches the disk only when the colour moves, never per tick. It sits beside `console.ts` rather than in `core/` because it needs the `Palette` type from `tui/`.
+
 ## Versioning, and where the changelog comes from
 
 Public and numbered now, so what ships has to be legible from outside. But the changelog is written at release time rather than as you work, and the reason is worth knowing: a commit is not proof. CI typechecks, builds and checks the layering. It cannot tell whether the console looks right with music playing, and only Daniel can, which happens after the commit and sometimes days after it. Logging as you go would fill the file with claims nobody had earned yet, and nothing would ever go back to retract the ones that did not pan out.

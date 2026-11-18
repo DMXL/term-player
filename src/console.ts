@@ -7,6 +7,7 @@ import { ASSUMED_CELL_RATIO, Screen } from './tui/screen.js';
 import { DEFAULT_PALETTE, paletteFrom, type Palette } from './tui/theme.js';
 import type { Player } from './core/player.js';
 import { BIN } from './core/command.js';
+import { Broadcaster, enabled as broadcastEnabled } from './broadcast.js';
 
 /**
  * The run loop. It drives a `Player` and knows nothing about which player is
@@ -28,6 +29,7 @@ export async function run(player: Player): Promise<number> {
 
   const screen = new Screen();
   const how = protocol();
+  const broadcast = broadcastEnabled() ? new Broadcaster() : null;
 
   let snap: Snapshot = EMPTY;
   let palette: Palette = DEFAULT_PALETTE;
@@ -75,6 +77,9 @@ export async function run(player: Player): Promise<number> {
       palette = art === null ? DEFAULT_PALETTE : paletteFrom(art.seed);
       repaint = true;
     }
+    // Deduplicated inside, so this only touches the disk when the colour moves,
+    // and the first tick publishes even when nothing is playing.
+    broadcast?.publish(palette);
     paint();
   };
 

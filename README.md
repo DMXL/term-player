@@ -113,6 +113,22 @@ Three limits shape this console directly:
 
 Extended quota, which would lift these, requires 250,000 monthly active users and a registered business, so Development Mode is permanent here. That is a cap of five users, which is ample for a console you run yourself.
 
+## Colour broadcast
+
+While the console runs, it publishes the palette it took from the cover so other terminal apps can wear the same colours. The channel is `~/.config/term-player/palette.json`, written atomically only when the colour changes and removed when the console exits. Set `TERM_PLAYER_BROADCAST=off` to turn it off.
+
+```json
+{
+  "version": 1,
+  "pid": 14467,
+  "updatedAt": "2026-11-18T06:37:02.391Z",
+  "ground": "#141413",
+  "palette": { "ground": "#141413", "text": "#eaebe8", "muted": "#555950", "accent": "#bcbfb6", "bright": "#dcded9", "track": "#3f403c" }
+}
+```
+
+A reader should treat the broadcast as live only while the file exists **and** `pid` is a running process (`kill -0`), since a console killed outright cannot clean up after itself. `ground` is the background, the one colour most readers want. The simplest way to adopt it is OSC 11 (`ESC ] 11 ; rgb:RR/GG/BB ESC \`), which repaints the terminal's own default background without touching anything the app draws, and OSC 111 hands the profile colour back. [danni-the-bot](https://github.com/DMXL/danni-the-bot) follows it this way, in `src/tui/tint.ts`.
+
 ## Layering
 
 `core/` imports nothing outside itself. `tui/` and `players/` each import `core/` and never each other. `cli.ts` and `console.ts` sit above, and `console.ts` drives a `Player` rather than a concrete player. Check it before committing:
