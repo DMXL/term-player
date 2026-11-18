@@ -68,6 +68,36 @@ Colour comes from resampling the cover to a single pixel with `sips` and reading
 
 Art renders inline on iTerm2 and Kitty. Everywhere else the space becomes a colour block, and the layout does not move.
 
+### The palette
+
+One colour comes off the cover, the seed, and the six colours on screen are all derived from it in `src/tui/theme.ts`, so they share one hue and differ in lightness. With no cover the seed is `(88, 74, 102)`.
+
+The operations, applied to each RGB channel (0 to 255):
+
+| Operation | Formula |
+|---|---|
+| `darken(c, a)` | `c × (1 − a)` |
+| `lighten(c, a)` | `c + (255 − c) × a` |
+| `mix(a, b, t)` | `a + (b − a) × t` |
+| `luminance(c)` | `(0.2126 R + 0.7152 G + 0.0722 B) / 255`, Rec. 709, 0 to 1 |
+| `saturate(c, 0.35)` | `grey + (c − grey) × 2.05`, where `grey` is `luminance(c) × 255` |
+| `contrastAgainst(c, ground, target)` | lighten `c` by 8% at a time (darken, on a light ground) until its luminance differs from the ground's by `target`, at most 24 steps |
+
+The ground is the seed taken 86% of the way to black. Everything else starts from the seed saturated, so a washed out cover does not give grey text, and all but `track` are then pushed until they read against the ground:
+
+| Colour | Used for | Derived as | Minimum luminance gap |
+|---|---|---|---|
+| `ground` | background | `darken(seed, 0.86)` | |
+| `track` | unplayed progress, rules | `mix(ground, lighten(sat, 0.3), 0.28)` | none, it is meant to stay faint |
+| `muted` | secondary text | `mix(sat, ground, 0.45)` | 0.22 |
+| `accent` | keys, highlights | `lighten(sat, 0.42)` | 0.34 |
+| `bright` | played progress, save mark | `lighten(sat, 0.70)` | 0.55 |
+| `text` | main text | `lighten(sat, 0.82)` | 0.62 |
+
+`sat` is `saturate(seed, 0.35)`. The saved dot is the one colour not derived, a fixed green, because it marks a state rather than the record.
+
+Two consequences follow. The ground always lands in roughly the darkest seventh of the range, so it moves little from track to track, and most of the visible change is in the text and accent. And a very pale cover can make `text` and `bright` the same white, since both are lightened from a seed already near it.
+
 ### Sizing
 
 The window is measured on every frame and again whenever it changes. The cover takes a share of the height rather than a fixed number of rows, so a tall window gets a large cover and a short one gets a small cover instead of a clipped screen. Below a certain height the cover is dropped entirely and the queue takes the room, because a list you can read beats a picture you cannot.
